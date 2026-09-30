@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { PaginationBar } from '@/components/PaginationBar';
 import { SearchInput } from '@/components/SearchInput';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/StateViews';
+import { useUnitScope } from '@/hooks/useUnitScope';
 import { toNumber, toPage, useUrlFilters } from '@/hooks/useUrlFilters';
 import type { AuditAction, AuditLog } from '@/lib/api/types';
 import { formatDateTime } from '@/lib/format';
@@ -102,7 +103,10 @@ const KEYS = ['search', 'user_id', 'action', 'resource', 'date_from', 'date_to',
 export default function AuditLogsPage() {
   const { filters, setFilters, resetFilters } = useUrlFilters(KEYS, { limit: '20' });
   const [selected, setSelected] = useState<AuditLog | null>(null);
+  const { unitId, unitName } = useUnitScope();
   const params = {
+    // Picked unit: only changes made by users of that unit.
+    unit_id: unitId,
     search: filters.search,
     user_id: toNumber(filters.user_id),
     action: (filters.action || undefined) as AuditAction | undefined,
@@ -156,12 +160,13 @@ export default function AuditLogsPage() {
         ) : query.data.items.length === 0 ? (
           <EmptyState title="Tidak ada log" description={hasFilter ? 'Coba ubah filter.' : 'Log tercatat otomatis setiap ada data yang ditambah, diubah, atau dihapus.'} />
         ) : (
-          <Table.ScrollContainer minWidth={980}>
+          <Table.ScrollContainer minWidth={1080}>
             <Table>
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Waktu</Table.Th>
                   <Table.Th>Pengguna</Table.Th>
+                  <Table.Th>Unit</Table.Th>
                   <Table.Th>Aksi</Table.Th>
                   <Table.Th>Data</Table.Th>
                   <Table.Th>Endpoint</Table.Th>
@@ -182,6 +187,9 @@ export default function AuditLogsPage() {
                   >
                     <Table.Td style={{ whiteSpace: 'nowrap' }}>{formatDateTime(log.created_at)}</Table.Td>
                     <Table.Td><Actor log={log} /></Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c={log.unit_id ? undefined : 'dimmed'}>{log.unit_id ? unitName(log.unit_id) : log.source === 'cli' ? 'CLI' : 'Pusat'}</Text>
+                    </Table.Td>
                     <Table.Td><ActionBadge action={log.action} /></Table.Td>
                     <Table.Td>
                       <Text size="sm">

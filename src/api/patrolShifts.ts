@@ -9,7 +9,7 @@ export interface PatrolShiftBody {
 }
 
 export const patrolShiftsApi = {
-  list: () => apiFetch<PatrolShift[]>('/patrol-shifts'),
+  list: (unitId?: number) => apiFetch<PatrolShift[]>('/patrol-shifts', { query: { unit_id: unitId } }),
   create: (body: PatrolShiftBody) => apiFetch<PatrolShift>('/patrol-shifts', { method: 'POST', json: body }),
   update: (id: number, body: PatrolShiftBody) =>
     apiFetch<PatrolShift>(`/patrol-shifts/${id}`, { method: 'PUT', json: body }),

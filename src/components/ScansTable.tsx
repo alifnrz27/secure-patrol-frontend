@@ -4,13 +4,14 @@ import type { PatrolScan } from '@/lib/api/types';
 import { formatDate, formatDateTime, formatDistance, isSentOffline } from '@/lib/format';
 import { ConditionBadge, YesNoBadge } from './Badges';
 
-export function ScansTable({ scans, onOpen, showShift = true }: { scans: PatrolScan[]; onOpen: (id: number) => void; showShift?: boolean }) {
+export function ScansTable({ scans, onOpen, showShift = true, showUnit = false }: { scans: PatrolScan[]; onOpen: (id: number) => void; showShift?: boolean; showUnit?: boolean }) {
   return (
     <Table.ScrollContainer minWidth={1100}>
       <Table>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Waktu scan</Table.Th>
+            {showUnit && <Table.Th>Unit</Table.Th>}
             {showShift && <Table.Th>Shift</Table.Th>}
             <Table.Th>Titik</Table.Th>
             <Table.Th>Kondisi</Table.Th>
@@ -44,6 +45,7 @@ export function ScansTable({ scans, onOpen, showShift = true }: { scans: PatrolS
                   )}
                 </Group>
               </Table.Td>
+              {showUnit && <Table.Td>{scan.group.unit_name}</Table.Td>}
               {showShift && (
                 <Table.Td>
                   <Text size="sm">{scan.group.shift_name}</Text>

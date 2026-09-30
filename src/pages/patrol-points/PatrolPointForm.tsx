@@ -7,6 +7,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { patrolPointsApi, type PatrolPointBody } from '@/api/patrolPoints';
 import { useAppConfig } from '@/hooks/useSession';
+import { useUnitScope } from '@/hooks/useUnitScope';
 import type { PatrolPoint } from '@/lib/api/types';
 import { applyServerErrors } from '@/lib/formErrors';
 import { notifyError, notifySuccess } from '@/lib/notify';
@@ -54,6 +55,8 @@ export function PatrolPointFormModal({ opened, point, onClose }: Props) {
 
 function PatrolPointForm({ point, onDone }: { point: PatrolPoint | null; onDone: () => void }) {
   const config = useAppConfig();
+  // New points start on the user's unit; NFC codes stay unique across every unit.
+  const { defaultCenter } = useUnitScope();
   const queryClient = useQueryClient();
   const [locating, setLocating] = useState(false);
   const { register, control, handleSubmit, setError, setValue, watch, formState } = useForm<FormInput, unknown, FormOutput>({
@@ -218,6 +221,7 @@ function PatrolPointForm({ point, onDone }: { point: PatrolPoint | null; onDone:
               latitude={typeof lat === 'number' ? lat : null}
               longitude={typeof lng === 'number' ? lng : null}
               radiusMeters={radius}
+              fallbackCenter={defaultCenter}
               onChange={setPosition}
             />
           </Suspense>

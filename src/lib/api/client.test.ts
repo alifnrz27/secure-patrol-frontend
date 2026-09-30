@@ -37,7 +37,7 @@ beforeEach(() => {
     calls.push({ url, init });
     return queue.shift() ?? ok(null);
   }));
-  setAuthHandler({ getAccessToken: async () => 'token-1', handleUnauthorized: async () => false });
+  setAuthHandler({ getAccessToken: async () => 'token-1', handleUnauthorized: async () => false, handleRevoked: () => undefined });
 });
 
 afterEach(() => {
@@ -105,7 +105,7 @@ describe('apiFetch', () => {
 
   it('treats other app errors as configuration problems, without touching the session', async () => {
     const handleUnauthorized = vi.fn(async () => true);
-    setAuthHandler({ getAccessToken: async () => 'token-1', handleUnauthorized });
+    setAuthHandler({ getAccessToken: async () => 'token-1', handleUnauthorized, handleRevoked: () => undefined });
     queue.push(unauthorized('Unauthorized app', 'request signature is invalid'));
     await expect(apiFetch('/auth/me')).rejects.toMatchObject({ kind: 'app' });
     expect(handleUnauthorized).not.toHaveBeenCalled();
@@ -121,6 +121,7 @@ describe('apiFetch', () => {
         token = 'new';
         return true;
       },
+      handleRevoked: () => undefined,
     });
     queue.push(unauthorized('Unauthorized', 'Token is expired'), ok('done'));
     await expect(apiFetch('/patrol-groups/current')).resolves.toBe('done');
@@ -131,6 +132,19 @@ describe('apiFetch', () => {
     queue.push(unauthorized('Unauthorized', 'Token is invalid'));
     await expect(apiFetch('/auth/me')).rejects.toMatchObject({ kind: 'unauthorized', status: 401 });
     expect(calls).toHaveLength(1);
+  });
+
+  it('ends the session on "unit inactive" from any request, not as a plain 403', async () => {
+    const handleRevoked = vi.fn();
+    setAuthHandler({ getAccessToken: async () => 'token-1', handleUnauthorized: async () => false, handleRevoked });
+    queue.push(reply(403, { meta: { message: 'Forbidden', code: 403, status: 'Error' }, data: 'your unit is inactive, contact the head office' }));
+    await expect(apiFetch('/patrol-points')).rejects.toMatchObject({ kind: 'forbidden' });
+    expect(handleRevoked).toHaveBeenCalledWith('unit_inactive');
+
+    handleRevoked.mockClear();
+    queue.push(reply(403, { meta: { message: 'Forbidden', code: 403, status: 'Error' }, data: 'You do not have access to this resource' }));
+    await expect(apiFetch('/app-clients')).rejects.toMatchObject({ kind: 'forbidden' });
+    expect(handleRevoked).not.toHaveBeenCalled();
   });
 
   it('maps network failures to kind "network"', async () => {

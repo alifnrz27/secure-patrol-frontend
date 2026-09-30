@@ -82,3 +82,7 @@ body {
 .article-editor .selectedCell {
   background: var(--mantine-color-blue-0);
 }
+
+.unit-card:hover {
+  background: var(--mantine-color-gray-0);
+}

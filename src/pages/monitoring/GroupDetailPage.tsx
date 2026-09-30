@@ -34,7 +34,7 @@ export default function GroupDetailPage() {
   const [scanId, setScanId] = useState<number | null>(null);
   const query = useQuery({ queryKey: ['patrol-groups', 'detail', id], queryFn: () => patrolApi.group(id), enabled: Number.isFinite(id) });
 
-  const title = query.data ? `${query.data.shift.name} · ${formatDate(query.data.shift_date)}` : 'Detail Group';
+  const title = query.data ? `${query.data.unit.name} · ${query.data.shift.name} · ${formatDate(query.data.shift_date)}` : 'Detail Group';
 
   return (
     <>

@@ -45,6 +45,7 @@ function ScanDetail({ scan }: { scan: PatrolScan }) {
 
   const rows: [string, ReactNode][] = [
     ['Titik', <><b>{scan.patrol_point.name}</b><br /><Text span size="xs" c="dimmed">{scan.patrol_point.location}</Text></>],
+    ['Unit', scan.group.unit_name],
     ['Shift', `${scan.group.shift_name} · ${formatDate(scan.group.shift_date)}`],
     ['Petugas', `${scan.scanned_by.name} (${scan.scanned_by.email})`],
     ['Kondisi', <ConditionBadge condition={scan.condition} />],

@@ -1,6 +1,6 @@
 import { apiOrigin, env } from '@/config/env';
 import { updateClockFromResponse, serverTimestampSeconds } from './clock';
-import { APP_AUTH_ERRORS, ApiError } from './errors';
+import { APP_AUTH_ERRORS, ApiError, PLATFORM_NOT_ALLOWED, UNIT_INACTIVE } from './errors';
 import { randomNonce, serializeFormData, serializeJson, signRequest, type PreparedBody } from './signing';
 import type { Envelope } from './types';
 
@@ -26,6 +26,8 @@ export interface AuthHandler {
   getAccessToken(): Promise<string | null>;
   /** Called after a 401 "Unauthorized". Resolves true when a new token is available. */
   handleUnauthorized(usedToken: string): Promise<boolean>;
+  /** The server revoked the session for good (inactive unit, role blocked on this platform). */
+  handleRevoked(reason: 'unit_inactive' | 'forbidden'): void;
 }
 
 let authHandler: AuthHandler | null = null;
@@ -133,6 +135,12 @@ export async function apiRequest(path: string, options: ApiRequestOptions = {}):
         continue;
       }
       throw error;
+    }
+
+    // Not an ordinary 403: the session itself is no longer allowed, on any request.
+    if (response.status === 403 && useAuth && authHandler) {
+      if (error.mentions(UNIT_INACTIVE)) authHandler.handleRevoked('unit_inactive');
+      else if (error.mentions(PLATFORM_NOT_ALLOWED)) authHandler.handleRevoked('forbidden');
     }
 
     if (response.status === 401 && useAuth && token && authHandler && !authRetried) {

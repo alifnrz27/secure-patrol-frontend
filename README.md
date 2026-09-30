@@ -113,22 +113,39 @@ src/
 - **Markdown** dirender tanpa `rehype-raw` dan tanpa `dangerouslySetInnerHTML`. HTML mentah tampil sebagai teks,
   tautan `javascript:` dibuang, dan gambar eksternal ditampilkan sebagai teks karena CSP.
 
-## Hak akses menu
+## Multi unit & hak akses
 
-| Menu | super_admin | security_manager | security_head, security_admin |
+| Jenis user | Role | Data |
+|---|---|---|
+| Pusat | `super_admin`, `security_manager` | semua unit; **pemilih unit** di header (`unit_id` dikirim ke semua daftar) |
+| Unit | `security_head`, `security_admin` | hanya unitnya; nama & kode unit tampil di header |
+
+| Fitur | super_admin | security_manager | security_head / security_admin |
 |---|---|---|---|
-| Dashboard, Monitoring Patroli, Titik per Shift/Periode, Riwayat Scan, Laporan, Help Desk, Profil | ✓ | ✓ | ✓ |
-| Titik Patroli, Pengaturan Shift, Pengguna, Role | ✓ | ✓ | |
-| App Client, Log Aktivitas | ✓ | | |
+| Dashboard, Monitoring, Titik per Shift, Riwayat Scan, Laporan, Export | semua unit | semua unit | unit sendiri |
+| Unit: lihat / kelola | ✓ / ✓ | ✓ / – | – / – |
+| Titik Patroli, Pengaturan Shift: lihat / kelola | ✓ / – | ✓ / – | ✓ / ✓ |
+| Pengguna: lihat / kelola | ✓ / ✓ | ✓ / – | ✓ / ✓ (role unit saja) |
+| Role: lihat / kelola | ✓ / ✓ | ✓ / – | ✓ / – |
+| App Client | ✓ | – | – |
+| Log Aktivitas | ✓ | ✓ | – |
+| Pengaturan: lihat / ubah | ✓ / nilai global | ✓ / – | ✓ / nilai unit sendiri |
+| Help Desk: draft / kelola | ✓ / ✓ | ✓ / – | – / – |
 
-- `security_team` (dan role kustom) **tidak bisa memakai web admin**. Jika login berhasil di server, sesi yang baru
-  dibuat langsung di-logout dan muncul pesan "Akun Anda tidak memiliki akses ke web admin". Pengecekan yang sama
-  dilakukan saat sesi dipulihkan (mis. role diganti).
-- Tambah/ubah/hapus Role dan mengelola user Super-Admin tetap khusus Super-Admin.
-- **Log Aktivitas** (`GET /audit-logs`) sengaja hanya untuk Super-Admin, walaupun backend juga mengizinkan Manager
-  Keamanan. Untuk membukanya bagi Manager, ubah `viewAuditLogs` di `src/lib/permissions.ts`.
-- Kepala dan Admin Keamanan tetap bisa mengelola artikel Help Desk.
-- Tabel ada di `src/lib/permissions.ts` (diuji di `permissions.test.ts`). Server tetap penentu akhir.
+- `security_team` (dan role kustom) tidak bisa memakai web admin.
+- Tabel ada di `src/lib/permissions.ts` (diuji di `permissions.test.ts`); server tetap penentu akhir.
+- **Pemilih unit** (`src/lib/unitScope.ts`, `useUnitScope`): "Semua unit" atau satu unit; disimpan di `localStorage`
+  sebagai kenyamanan. Saat "Semua unit", tabel menampilkan kolom **Unit** dan Dashboard menampilkan kartu ringkasan per
+  unit aktif (paralel, maksimal 5 request sekaligus); klik kartu memilih unit tersebut.
+- **Unit nonaktif**: `403 your unit is inactive, contact the head office` pada request apa pun mengakhiri sesi di semua
+  tab dan menampilkan "Unit Anda sedang dinonaktifkan, hubungi pusat." di halaman login.
+- **Pengaturan**: Super-Admin mengedit nilai global (↺ = kembali ke default); dengan unit dipilih, nilai unit itu hanya
+  dibaca. Kepala/Admin Keamanan mengedit nilai unitnya: badge "Mengikuti pusat", "Nilai pusat: …", dan tombol
+  "Ikuti nilai pusat" (`null`). Manager hanya membaca.
+- **Pengguna**: field Unit hanya untuk Super-Admin dan hanya jika role yang dipilih role unit; role pusat
+  disembunyikan dari Kepala/Admin Keamanan; memindahkan unit menampilkan peringatan keluar dari semua perangkat.
+- **Ekspor Excel**: dialog berisi field Unit untuk user pusat (awal dari pemilih unit); CSV ikut `unit_id` pemilih dan
+  punya kolom Unit.
 
 ## Content Security Policy (hosting)
 
@@ -191,9 +208,8 @@ dengan jalur yang sudah diuji), serta drag & drop dengan keyboard (sudah didukun
 
 ## Permintaan ke backend
 
-1. **Daftar petugas untuk Kepala dan Admin Keamanan** (filter "Petugas" di Riwayat Scan). Menu Pengguna (`GET /users`)
-   hanya untuk Super-Admin dan Manager, jadi filter ini disembunyikan untuk Kepala dan Admin Keamanan. Usulan endpoint
-   ringan yang boleh dipakai semua role web:
+1. ~~Daftar petugas untuk Kepala/Admin Keamanan~~ — **sudah terpenuhi**: `GET /users` kini dibatasi per unit oleh
+   server, sehingga filter "Petugas" tersedia untuk semua role web. Usulan awal (untuk arsip):
 
    ```
    GET /api/v1/patrol-officers?search=budi&limit=100

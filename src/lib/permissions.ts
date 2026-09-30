@@ -1,37 +1,53 @@
 import type { RoleCode } from '@/lib/api/types';
 
-// Mirrors the access rules of the backend. The server still enforces every
-// rule; this only decides which menus and buttons are shown.
+// Mirrors the multi-unit access rules of the backend. The server still
+// enforces every rule; this only decides which menus and buttons are shown.
 //
-// | Menu                                        | super_admin | security_manager | security_head / security_admin |
-// | Dashboard, Monitoring, Titik per Shift,     |      ✓      |        ✓         |               ✓                |
-// |   Riwayat Scan, Laporan, Help Desk, Profil  |             |                  |                                |
-// | Titik Patroli, Pengaturan Shift, Pengguna,  |      ✓      |        ✓         |                                |
-// |   Role                                      |             |                  |                                |
-// | App Client, Log Aktivitas                   |      ✓      |                  |                                |
-// security_team (and any custom role) cannot use the web admin at all.
+// Head office (no unit): super_admin, security_manager — see every unit.
+// Unit users: security_head, security_admin — see only their own unit.
+// security_team (and custom roles) cannot use the web admin.
+//
+// | Fitur                                     | super_admin | security_manager | security_head / security_admin |
+// | Dashboard, Monitoring, Titik per Shift,   |  semua unit |    semua unit    |          unit sendiri          |
+// |   Riwayat Scan, Laporan, Export           |             |                  |                                |
+// | Unit: lihat / kelola                      |    ✓ / ✓    |      ✓ / -       |             - / -              |
+// | Titik Patroli, Shift: lihat / kelola      |    ✓ / -    |      ✓ / -       |             ✓ / ✓              |
+// | Pengguna: lihat / kelola                  |    ✓ / ✓    |      ✓ / -       |   ✓ / ✓ (role unit saja)       |
+// | Role: lihat / kelola                      |    ✓ / ✓    |      ✓ / -       |             ✓ / -              |
+// | App Client                                |      ✓      |                  |                                |
+// | Log Aktivitas                             |      ✓      |        ✓         |                                |
+// | Pengaturan: lihat / ubah                  | ✓ / global  |      ✓ / -       |       ✓ / unit sendiri         |
+// | Help Desk: draft / kelola                 |    ✓ / ✓    |      ✓ / -       |             - / -              |
 
+export const HEAD_OFFICE_ROLES: RoleCode[] = ['super_admin', 'security_manager'];
 const WEB_USERS: RoleCode[] = ['super_admin', 'security_manager', 'security_admin', 'security_head'];
-const MANAGERS: RoleCode[] = ['super_admin', 'security_manager'];
+const UNIT_MANAGERS: RoleCode[] = ['security_head', 'security_admin'];
 const SUPER_ADMIN: RoleCode[] = ['super_admin'];
 
 export const PERMISSIONS = {
   webAccess: WEB_USERS,
   viewPatrol: WEB_USERS,
-  managePatrolPoints: MANAGERS,
-  manageShifts: MANAGERS,
-  manageUsers: MANAGERS,
-  viewRoles: MANAGERS,
-  // Creating, editing and deleting roles stays with the Super-Admin (backend rule).
+  viewUnits: HEAD_OFFICE_ROLES,
+  manageUnits: SUPER_ADMIN,
+  viewPatrolPoints: WEB_USERS,
+  managePatrolPoints: UNIT_MANAGERS,
+  viewShifts: WEB_USERS,
+  manageShifts: UNIT_MANAGERS,
+  viewUsers: WEB_USERS,
+  manageUsers: [...SUPER_ADMIN, ...UNIT_MANAGERS],
+  /** Assign head office roles (super_admin, security_manager) and pick a user's unit. */
+  manageHeadOfficeUsers: SUPER_ADMIN,
+  viewRoles: WEB_USERS,
   manageRoles: SUPER_ADMIN,
-  manageSuperAdmins: SUPER_ADMIN,
   manageAppClients: SUPER_ADMIN,
-  // The backend also allows security_manager; the menu is kept to the Super-Admin on purpose.
-  viewAuditLogs: SUPER_ADMIN,
-  viewHelpDeskDrafts: WEB_USERS,
-  manageHelpDesk: WEB_USERS,
-  // Needs GET /users, which only the roles with the Pengguna menu may call.
-  filterScansByOfficer: MANAGERS,
+  viewAuditLogs: HEAD_OFFICE_ROLES,
+  viewSettings: WEB_USERS,
+  /** Super-Admin edits the global values, unit managers the values of their unit. */
+  editSettings: [...SUPER_ADMIN, ...UNIT_MANAGERS],
+  viewHelpDeskDrafts: HEAD_OFFICE_ROLES,
+  manageHelpDesk: SUPER_ADMIN,
+  // GET /users is scoped by the server, so every web role can filter by officer.
+  filterScansByOfficer: WEB_USERS,
 } as const satisfies Record<string, RoleCode[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -40,6 +56,10 @@ export function hasPermission(roleCode: string | null | undefined, permission: P
   if (!roleCode) return false;
   const roles: readonly string[] = PERMISSIONS[permission];
   return roles.includes(roleCode);
+}
+
+export function isHeadOfficeRole(roleCode: string | null | undefined): boolean {
+  return Boolean(roleCode) && (HEAD_OFFICE_ROLES as readonly string[]).includes(roleCode!);
 }
 
 export const SUPER_ADMIN_ROLE = 'super_admin';

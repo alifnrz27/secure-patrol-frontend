@@ -1,6 +1,6 @@
 import { apiFetch, setAuthHandler, syncClockWithServer } from '@/lib/api/client';
 import { serverNow } from '@/lib/api/clock';
-import { ApiError, isApiError } from '@/lib/api/errors';
+import { ApiError, isApiError, UNIT_INACTIVE } from '@/lib/api/errors';
 import type { AppConfig, LoginUser, TokenResponse, User } from '@/lib/api/types';
 import { hasPermission } from '@/lib/permissions';
 
@@ -19,7 +19,7 @@ const PEER_TOKEN_WAIT_MS = 400;
 const BROADCAST_WAIT_MS = 1500;
 
 export type SessionStatus = 'loading' | 'authenticated' | 'unauthenticated';
-export type SessionEndReason = 'expired' | 'logout' | 'forbidden' | null;
+export type SessionEndReason = 'expired' | 'logout' | 'forbidden' | 'unit_inactive' | null;
 
 /** Message of the error thrown when a role may not use the web admin (e.g. security_team). */
 export const WEB_ACCESS_DENIED = 'this role is not allowed to use the web admin';
@@ -113,6 +113,9 @@ class SessionManager {
     setAuthHandler({
       getAccessToken: () => this.getAccessToken(),
       handleUnauthorized: (usedToken) => this.handleUnauthorized(usedToken),
+      handleRevoked: (reason) => {
+        if (this.state.status !== 'unauthenticated') this.end(reason);
+      },
     });
 
     if (typeof BroadcastChannel !== 'undefined') {
@@ -239,7 +242,7 @@ class SessionManager {
         });
       } catch (error) {
         if (isApiError(error) && (error.kind === 'unauthorized' || error.kind === 'validation' || error.kind === 'forbidden')) {
-          this.end('expired');
+          this.end(error.mentions(UNIT_INACTIVE) ? 'unit_inactive' : 'expired');
           return false;
         }
         throw error;
@@ -358,6 +361,12 @@ class SessionManager {
       if (everywhere) throw error;
     }
     this.end('logout');
+  }
+
+  /** Reloads the app config (e.g. the location radius) after settings change. */
+  async refreshConfig(): Promise<void> {
+    const config = await apiFetch<AppConfig>('/app-config');
+    if (this.state.status === 'authenticated') this.setState({ config });
   }
 
   /** Updates the cached profile after the user edits it. */

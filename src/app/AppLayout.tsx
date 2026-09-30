@@ -3,6 +3,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import {
   IconApps,
+  IconBuilding,
   IconCalendarTime,
   IconChartBar,
   IconChevronDown,
@@ -13,6 +14,7 @@ import {
   IconListCheck,
   IconLogout,
   IconMapPin,
+  IconSettings,
   IconShieldCheck,
   IconUser,
   IconUserShield,
@@ -21,6 +23,7 @@ import {
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { UnitPicker } from '@/components/UnitPicker';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useSession } from '@/hooks/useSession';
 import { describeError } from '@/lib/api/errors';
@@ -47,12 +50,14 @@ const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
   {
     title: 'Master Data',
     items: [
-      { to: '/patrol-points', label: 'Titik Patroli', icon: <IconMapPin size={18} />, permission: 'managePatrolPoints' },
-      { to: '/shifts', label: 'Pengaturan Shift', icon: <IconCalendarTime size={18} />, permission: 'manageShifts' },
-      { to: '/users', label: 'Pengguna', icon: <IconUsers size={18} />, permission: 'manageUsers' },
+      { to: '/units', label: 'Unit', icon: <IconBuilding size={18} />, permission: 'viewUnits' },
+      { to: '/patrol-points', label: 'Titik Patroli', icon: <IconMapPin size={18} />, permission: 'viewPatrolPoints' },
+      { to: '/shifts', label: 'Pengaturan Shift', icon: <IconCalendarTime size={18} />, permission: 'viewShifts' },
+      { to: '/users', label: 'Pengguna', icon: <IconUsers size={18} />, permission: 'viewUsers' },
       { to: '/roles', label: 'Role', icon: <IconUserShield size={18} />, permission: 'viewRoles' },
       { to: '/app-clients', label: 'App Client', icon: <IconApps size={18} />, permission: 'manageAppClients' },
       { to: '/audit-logs', label: 'Log Aktivitas', icon: <IconFileText size={18} />, permission: 'viewAuditLogs' },
+      { to: '/settings', label: 'Pengaturan', icon: <IconSettings size={18} />, permission: 'viewSettings' },
     ],
   },
   {
@@ -94,40 +99,43 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </Text>
           </Group>
           {user && (
-            <Menu position="bottom-end" width={220} withinPortal>
-              <Menu.Target>
-                <UnstyledButton aria-label="Menu akun">
-                  <Group gap="xs">
-                    <UserAvatar
-                      name={user.name}
-                      dataUrl={avatarDataUrl}
-                      path={user.face_photo_url ? '/api/v1/auth/me/face-photo' : null}
-                      version={user.face_photo_updated_at}
-                      size={34}
-                      radius="xl"
-                    />
-                    <div style={{ lineHeight: 1.1 }}>
-                      <Text size="sm" fw={600}>
-                        {user.name}
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        {user.role.name}
-                      </Text>
-                    </div>
-                    <IconChevronDown size={14} />
-                  </Group>
-                </UnstyledButton>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item component={Link} to="/profile" leftSection={<IconUser size={16} />}>
-                  Profil
-                </Menu.Item>
-                <Menu.Divider />
-                <Menu.Item color="red" leftSection={<IconLogout size={16} />} onClick={() => void logout()}>
-                  Keluar
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
+            <Group gap="md" wrap="nowrap">
+              <UnitPicker />
+              <Menu position="bottom-end" width={220} withinPortal>
+                <Menu.Target>
+                  <UnstyledButton aria-label="Menu akun">
+                    <Group gap="xs">
+                      <UserAvatar
+                        name={user.name}
+                        dataUrl={avatarDataUrl}
+                        path={user.face_photo_url ? '/api/v1/auth/me/face-photo' : null}
+                        version={user.face_photo_updated_at}
+                        size={34}
+                        radius="xl"
+                      />
+                      <div style={{ lineHeight: 1.1 }}>
+                        <Text size="sm" fw={600}>
+                          {user.name}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          {user.role.name}
+                        </Text>
+                      </div>
+                      <IconChevronDown size={14} />
+                    </Group>
+                  </UnstyledButton>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item component={Link} to="/profile" leftSection={<IconUser size={16} />}>
+                    Profil
+                  </Menu.Item>
+                  <Menu.Divider />
+                  <Menu.Item color="red" leftSection={<IconLogout size={16} />} onClick={() => void logout()}>
+                    Keluar
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            </Group>
           )}
         </Group>
       </AppShell.Header>

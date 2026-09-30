@@ -1,4 +1,4 @@
-import { ActionIcon, Badge, Button, Card, Group, Modal, Select, Table, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Badge, Button, Card, Checkbox, Group, Modal, Select, Table, Text, Tooltip } from '@mantine/core';
 import { IconKey, IconLock, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -12,25 +12,32 @@ import { SearchInput } from '@/components/SearchInput';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/StateViews';
 import { UserAvatar } from '@/components/UserAvatar';
 import { usePermission, useSession } from '@/hooks/useSession';
+import { useUnitScope } from '@/hooks/useUnitScope';
 import { toNumber, toPage, useUrlFilters } from '@/hooks/useUrlFilters';
 import type { User } from '@/lib/api/types';
 import { formatDateTime } from '@/lib/format';
 import { notifyError, notifySuccess } from '@/lib/notify';
-import { SUPER_ADMIN_ROLE } from '@/lib/permissions';
+import { isHeadOfficeRole } from '@/lib/permissions';
 import { ResetPasswordModal, UserForm } from './UserForms';
 
-const KEYS = ['search', 'role_id', 'is_active', 'page', 'limit'] as const;
+const KEYS = ['search', 'role_id', 'is_active', 'head_office', 'page', 'limit'] as const;
 
 export default function UsersPage() {
   const { user: me } = useSession();
-  const isSuperAdmin = usePermission('manageSuperAdmins');
+  const isSuperAdmin = usePermission('manageHeadOfficeUsers');
+  const canManage = usePermission('manageUsers');
+  const { isHeadOffice, unitId, showUnitColumn } = useUnitScope();
   const queryClient = useQueryClient();
   const { filters, setFilters } = useUrlFilters(KEYS, { limit: '10' });
   const [formUser, setFormUser] = useState<User | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [resetUser, setResetUser] = useState<User | null>(null);
 
+  const headOfficeOnly = isHeadOffice && filters.head_office === 'true';
   const params = {
+    // "Hanya user pusat" and a unit filter exclude each other.
+    unit_id: headOfficeOnly ? undefined : unitId,
+    head_office: headOfficeOnly || undefined,
     search: filters.search,
     role_id: toNumber(filters.role_id),
     is_active: filters.is_active === '' ? undefined : filters.is_active === 'true',
@@ -54,7 +61,8 @@ export default function UsersPage() {
     setFormOpen(true);
   };
 
-  const canTouch = (user: User) => isSuperAdmin || user.role.code !== SUPER_ADMIN_ROLE;
+  // Only the Super-Admin manages head office users; unit managers only see their unit anyway.
+  const canTouch = (user: User) => canManage && (isSuperAdmin || !isHeadOfficeRole(user.role.code));
   const roleOptions = (roles.data?.items ?? []).map((r) => ({ value: String(r.id), label: r.name }));
 
   return (
@@ -63,9 +71,11 @@ export default function UsersPage() {
         title="Pengguna"
         description="Akun petugas dan admin beserta foto wajah untuk validasi."
         actions={
-          <Button leftSection={<IconPlus size={16} />} onClick={() => openForm(null)} disabled={!roles.data}>
-            Tambah Pengguna
-          </Button>
+          canManage && (
+            <Button leftSection={<IconPlus size={16} />} onClick={() => openForm(null)} disabled={!roles.data}>
+              Tambah Pengguna
+            </Button>
+          )
         }
       />
       <Card withBorder radius="md">
@@ -92,6 +102,13 @@ export default function UsersPage() {
             clearable
             w={160}
           />
+          {isHeadOffice && (
+            <Checkbox
+              label="Hanya user pusat"
+              checked={headOfficeOnly}
+              onChange={(e) => setFilters({ head_office: e.currentTarget.checked ? 'true' : null })}
+            />
+          )}
         </Group>
         {query.isPending ? (
           <TableSkeleton cols={7} />
@@ -107,6 +124,7 @@ export default function UsersPage() {
                   <Table.Th w={56}>Foto</Table.Th>
                   <Table.Th>Nama</Table.Th>
                   <Table.Th>Role</Table.Th>
+                  {(showUnitColumn || headOfficeOnly) && <Table.Th>Unit</Table.Th>}
                   <Table.Th>Status</Table.Th>
                   <Table.Th>Login terakhir</Table.Th>
                   <Table.Th w={130}>Aksi</Table.Th>
@@ -128,6 +146,7 @@ export default function UsersPage() {
                         <Text size="xs" c="dimmed">{user.email}</Text>
                       </Table.Td>
                       <Table.Td>{user.role.name}</Table.Td>
+                      {(showUnitColumn || headOfficeOnly) && <Table.Td>{user.unit?.name ?? <Text span c="dimmed" size="sm">Pusat</Text>}</Table.Td>}
                       <Table.Td>
                         <Group gap={4}>
                           <ActiveBadge active={user.is_active} />
@@ -165,7 +184,7 @@ export default function UsersPage() {
                             </Tooltip>
                           </Group>
                         ) : (
-                          <Text size="xs" c="dimmed">Hanya Super-Admin</Text>
+                          <Text size="xs" c="dimmed">{canManage ? 'Hanya Super-Admin' : '-'}</Text>
                         )}
                       </Table.Td>
                     </Table.Tr>
@@ -180,7 +199,7 @@ export default function UsersPage() {
 
       <Modal opened={formOpen} onClose={() => setFormOpen(false)} title={formUser ? 'Ubah Pengguna' : 'Tambah Pengguna'} size="lg" centered>
         {formOpen && roles.data && me && (
-          <UserForm user={formUser} roles={roles.data.items} currentUserId={me.id} isSuperAdmin={isSuperAdmin} onDone={() => setFormOpen(false)} />
+          <UserForm user={formUser} roles={roles.data.items} currentUserId={me.id} isSuperAdmin={isSuperAdmin} defaultUnitId={unitId} onDone={() => setFormOpen(false)} />
         )}
       </Modal>
       <ResetPasswordModal user={resetUser} onClose={() => setResetUser(null)} />

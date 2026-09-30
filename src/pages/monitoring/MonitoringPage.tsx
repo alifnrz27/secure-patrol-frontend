@@ -8,6 +8,7 @@ import { ProgressCell } from '@/components/GroupItemsTable';
 import { PageHeader } from '@/components/PageHeader';
 import { PaginationBar } from '@/components/PaginationBar';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/StateViews';
+import { useUnitScope } from '@/hooks/useUnitScope';
 import { toNumber, toPage, useUrlFilters } from '@/hooks/useUrlFilters';
 import { formatDate, formatTime } from '@/lib/format';
 
@@ -15,7 +16,9 @@ const KEYS = ['shift_id', 'date_from', 'date_to', 'page', 'limit'] as const;
 
 export default function MonitoringPage() {
   const { filters, setFilters, resetFilters } = useUrlFilters(KEYS, { limit: '20' });
+  const { unitId, showUnitColumn } = useUnitScope();
   const params = {
+    unit_id: unitId,
     shift_id: toNumber(filters.shift_id),
     date_from: filters.date_from,
     date_to: filters.date_to,
@@ -50,6 +53,7 @@ export default function MonitoringPage() {
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Tanggal shift</Table.Th>
+                  {showUnitColumn && <Table.Th>Unit</Table.Th>}
                   <Table.Th>Shift</Table.Th>
                   <Table.Th>Status</Table.Th>
                   <Table.Th>Progres</Table.Th>
@@ -62,6 +66,7 @@ export default function MonitoringPage() {
                 {query.data.items.map((group) => (
                   <Table.Tr key={group.id}>
                     <Table.Td>{formatDate(group.shift_date)}</Table.Td>
+                    {showUnitColumn && <Table.Td>{group.unit.name}</Table.Td>}
                     <Table.Td>
                       <Text size="sm" fw={600}>{group.shift.name}</Text>
                       <Text size="xs" c="dimmed">{formatTime(group.start_at)}–{formatTime(group.end_at)}</Text>

@@ -11,6 +11,7 @@ import { confirmDelete } from '@/components/confirm';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/StateViews';
 import { usePermission } from '@/hooks/useSession';
+import { useUnitScope } from '@/hooks/useUnitScope';
 import type { PatrolShift } from '@/lib/api/types';
 import { formatDuration } from '@/lib/format';
 import { applyServerErrors } from '@/lib/formErrors';
@@ -113,7 +114,8 @@ export default function ShiftsPage() {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<PatrolShift | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const query = useQuery({ queryKey: ['patrol-shifts'], queryFn: patrolShiftsApi.list });
+  const { unitId, showUnitColumn, unitName } = useUnitScope();
+  const query = useQuery({ queryKey: ['patrol-shifts', unitId ?? 'all'], queryFn: () => patrolShiftsApi.list(unitId) });
 
   const remove = useMutation({
     mutationFn: (id: number) => patrolShiftsApi.remove(id),
@@ -131,6 +133,8 @@ export default function ShiftsPage() {
 
   const shifts = query.data ?? [];
   const active = shifts.filter((s) => s.is_active);
+  // Overlaps are checked per unit, so each unit gets its own timeline.
+  const activeByUnit = [...new Set(active.map((s) => s.unit_id))].map((id) => ({ id, shifts: active.filter((s) => s.unit_id === id) }));
 
   return (
     <>
@@ -150,7 +154,22 @@ export default function ShiftsPage() {
           <Title order={4} mb="sm">
             Timeline 24 jam (shift aktif)
           </Title>
-          {query.isPending ? <TableSkeleton rows={3} cols={1} /> : active.length ? <ShiftTimeline shifts={active} /> : <Text c="dimmed" size="sm">Tidak ada shift aktif.</Text>}
+          {query.isPending ? (
+            <TableSkeleton rows={3} cols={1} />
+          ) : !active.length ? (
+            <Text c="dimmed" size="sm">Tidak ada shift aktif.</Text>
+          ) : showUnitColumn ? (
+            <Stack gap="lg">
+              {activeByUnit.map((unit) => (
+                <div key={unit.id}>
+                  <Text size="sm" fw={600} mb={4}>{unitName(unit.id)}</Text>
+                  <ShiftTimeline shifts={unit.shifts} />
+                </div>
+              ))}
+            </Stack>
+          ) : (
+            <ShiftTimeline shifts={active} />
+          )}
           <List size="xs" c="dimmed" mt="sm" spacing={2}>
             <List.Item>Jam akhir adalah batas (cut-off): scan tepat di jam akhir masuk ke shift berikutnya.</List.Item>
             <List.Item>Perubahan jam hanya berlaku untuk shift berikutnya; group yang sudah dibuat tetap memakai jam lamanya.</List.Item>
@@ -168,6 +187,7 @@ export default function ShiftsPage() {
               <Table>
                 <Table.Thead>
                   <Table.Tr>
+                    {showUnitColumn && <Table.Th>Unit</Table.Th>}
                     <Table.Th>Nama</Table.Th>
                     <Table.Th>Jam</Table.Th>
                     <Table.Th>Durasi</Table.Th>
@@ -178,6 +198,7 @@ export default function ShiftsPage() {
                 <Table.Tbody>
                   {shifts.map((shift) => (
                     <Table.Tr key={shift.id}>
+                      {showUnitColumn && <Table.Td>{unitName(shift.unit_id)}</Table.Td>}
                       <Table.Td fw={600}>{shift.name}</Table.Td>
                       <Table.Td>
                         {shift.start_time} – {shift.end_time}

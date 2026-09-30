@@ -126,6 +126,10 @@ export default function ProfilePage() {
                         <Table.Td>{user.role.name}</Table.Td>
                       </Table.Tr>
                       <Table.Tr>
+                        <Table.Th fw={500} c="dimmed">Unit</Table.Th>
+                        <Table.Td>{user.unit ? `${user.unit.name} (${user.unit.code})` : 'Pusat (semua unit)'}</Table.Td>
+                      </Table.Tr>
+                      <Table.Tr>
                         <Table.Th fw={500} c="dimmed">Status</Table.Th>
                         <Table.Td><ActiveBadge active={user.is_active} /></Table.Td>
                       </Table.Tr>

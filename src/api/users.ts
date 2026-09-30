@@ -4,6 +4,9 @@ import type { ListParams, Paginated, User } from '@/lib/api/types';
 export interface UserListParams extends ListParams {
   role_id?: number;
   is_active?: boolean;
+  unit_id?: number;
+  /** Only head office users (no unit); head office callers only */
+  head_office?: boolean;
 }
 
 export interface UserFormValues {
@@ -12,6 +15,8 @@ export interface UserFormValues {
   role_id: number;
   is_active: boolean;
   face_photo?: File | null;
+  /** Unit roles only; sent by the Super-Admin. Omitted = unchanged on update. */
+  unit_id?: number;
   password?: string;
   password_confirmation?: string;
 }
@@ -22,6 +27,7 @@ function toFormData(values: UserFormValues): FormData {
   form.append('email', values.email.trim());
   form.append('role_id', String(values.role_id));
   form.append('is_active', String(values.is_active));
+  if (values.unit_id !== undefined) form.append('unit_id', String(values.unit_id));
   if (values.password !== undefined) form.append('password', values.password);
   if (values.password_confirmation !== undefined) form.append('password_confirmation', values.password_confirmation);
   if (values.face_photo) form.append('face_photo', values.face_photo, values.face_photo.name);

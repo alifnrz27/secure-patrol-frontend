@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { PaginationBar } from '@/components/PaginationBar';
 import { SearchInput } from '@/components/SearchInput';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/StateViews';
+import { useUnitScope } from '@/hooks/useUnitScope';
 import { toNumber, toPage, useUrlFilters } from '@/hooks/useUrlFilters';
 import { serverNow } from '@/lib/api/clock';
 import type { PatrolListItem } from '@/lib/api/types';
@@ -22,7 +23,9 @@ function isMissed(item: PatrolListItem): boolean {
 
 export default function CheckpointsPage() {
   const { filters, setFilters, resetFilters } = useUrlFilters(KEYS, { limit: '20' });
+  const { unitId, showUnitColumn } = useUnitScope();
   const params = {
+    unit_id: unitId,
     group_id: toNumber(filters.group_id),
     shift_id: toNumber(filters.shift_id),
     date_from: filters.date_from,
@@ -78,6 +81,7 @@ export default function CheckpointsPage() {
             <Table>
               <Table.Thead>
                 <Table.Tr>
+                  {showUnitColumn && <Table.Th>Unit</Table.Th>}
                   <Table.Th>Shift</Table.Th>
                   <Table.Th>Titik</Table.Th>
                   <Table.Th>Status</Table.Th>
@@ -91,6 +95,7 @@ export default function CheckpointsPage() {
                   const missed = isMissed(item);
                   return (
                     <Table.Tr key={item.id} className={missed ? 'row-warning' : item.last_condition === 'abnormal' ? 'row-danger' : undefined}>
+                      {showUnitColumn && <Table.Td>{item.group?.unit_name ?? '-'}</Table.Td>}
                       <Table.Td>
                         {item.group ? (
                           <>

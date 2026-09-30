@@ -9,6 +9,7 @@ import { PaginationBar } from '@/components/PaginationBar';
 import { SearchInput } from '@/components/SearchInput';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/StateViews';
 import { usePermission } from '@/hooks/useSession';
+import { useUnitScope } from '@/hooks/useUnitScope';
 import { toPage, useUrlFilters } from '@/hooks/useUrlFilters';
 import type { PatrolPoint } from '@/lib/api/types';
 import { notifyError, notifySuccess } from '@/lib/notify';
@@ -23,7 +24,8 @@ export default function PatrolPointsPage() {
   const [editing, setEditing] = useState<PatrolPoint | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
-  const params = { search: filters.search, page: toPage(filters.page), limit: Number(filters.limit) || 10 };
+  const { unitId, showUnitColumn, unitName } = useUnitScope();
+  const params = { unit_id: unitId, search: filters.search, page: toPage(filters.page), limit: Number(filters.limit) || 10 };
   const query = useQuery({
     queryKey: ['patrol-points', 'list', params],
     queryFn: () => patrolPointsApi.list(params),
@@ -75,6 +77,7 @@ export default function PatrolPointsPage() {
             <Table>
               <Table.Thead>
                 <Table.Tr>
+                  {showUnitColumn && <Table.Th>Unit</Table.Th>}
                   <Table.Th>Nama</Table.Th>
                   <Table.Th>Lokasi</Table.Th>
                   <Table.Th>Kode NFC</Table.Th>
@@ -86,6 +89,7 @@ export default function PatrolPointsPage() {
               <Table.Tbody>
                 {query.data.items.map((point) => (
                   <Table.Tr key={point.id}>
+                    {showUnitColumn && <Table.Td>{unitName(point.unit_id)}</Table.Td>}
                     <Table.Td fw={600}>{point.name}</Table.Td>
                     <Table.Td>{point.location}</Table.Td>
                     <Table.Td>

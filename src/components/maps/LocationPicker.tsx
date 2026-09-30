@@ -6,8 +6,11 @@ import { FitBounds, MapBase, pinIcon } from './MapBase';
 interface Props {
   latitude: number | null;
   longitude: number | null;
+  /** Accepted scan area; 0 hides the circle. */
   radiusMeters: number;
   onChange: (lat: number, lng: number) => void;
+  /** Where the map starts when no position is set yet (e.g. the user's unit). */
+  fallbackCenter?: [number, number];
 }
 
 function round(value: number) {
@@ -21,7 +24,7 @@ function ClickToPlace({ onChange }: { onChange: Props['onChange'] }) {
   return null;
 }
 
-export function LocationPicker({ latitude, longitude, radiusMeters, onChange }: Props) {
+export function LocationPicker({ latitude, longitude, radiusMeters, onChange, fallbackCenter }: Props) {
   const valid =
     latitude !== null && longitude !== null && Number.isFinite(latitude) && Number.isFinite(longitude) &&
     Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
@@ -29,13 +32,13 @@ export function LocationPicker({ latitude, longitude, radiusMeters, onChange }: 
   const icon = useMemo(() => pinIcon('#1c7ed6'), []);
 
   return (
-    <MapBase ariaLabel="Pemilih lokasi titik patroli. Klik peta atau geser penanda untuk memilih lokasi." height={340} center={position ?? undefined}>
+    <MapBase ariaLabel="Pemilih lokasi titik patroli. Klik peta atau geser penanda untuk memilih lokasi." height={340} center={position ?? fallbackCenter}>
       <ClickToPlace onChange={onChange} />
       {position && (
         <>
           {/* Pans to coordinates typed outside the current view. */}
           <FitBounds points={[position]} fitKey={`${position[0].toFixed(4)},${position[1].toFixed(4)}`} />
-          <Circle center={position} radius={radiusMeters} pathOptions={{ color: '#1c7ed6', weight: 1, fillOpacity: 0.12 }} />
+          {radiusMeters > 0 && <Circle center={position} radius={radiusMeters} pathOptions={{ color: '#1c7ed6', weight: 1, fillOpacity: 0.12 }} />}
           <Marker
             position={position}
             draggable

@@ -6,56 +6,74 @@ import { useEffect, useState } from 'react';
 import { patrolPointsApi } from '@/api/patrolPoints';
 import { patrolShiftsApi } from '@/api/patrolShifts';
 import { usersApi } from '@/api/users';
+import { useUnitScope } from '@/hooks/useUnitScope';
 import { dayjs } from '@/lib/format';
 
+/** Shifts of the picked unit (head office: every unit when none is picked). */
 export function useShifts() {
-  return useQuery({ queryKey: ['patrol-shifts'], queryFn: patrolShiftsApi.list, staleTime: 60_000 });
+  const { unitId } = useUnitScope();
+  return useQuery({ queryKey: ['patrol-shifts', unitId ?? 'all'], queryFn: () => patrolShiftsApi.list(unitId), staleTime: 60_000 });
 }
 
 export function ShiftSelect({ value, onChange }: { value: string; onChange: (v: string | null) => void }) {
   const shifts = useShifts();
+  const { showUnitColumn, unitName } = useUnitScope();
   return (
     <Select
       aria-label="Filter shift"
       placeholder="Semua shift"
-      data={(shifts.data ?? []).map((s) => ({ value: String(s.id), label: `${s.name} (${s.start_time}–${s.end_time})` }))}
+      data={(shifts.data ?? []).map((s) => ({
+        value: String(s.id),
+        label: `${s.name} (${s.start_time}–${s.end_time})${showUnitColumn ? ` — ${unitName(s.unit_id)}` : ''}`,
+      }))}
       value={value || null}
       onChange={onChange}
+      searchable
       clearable
-      w={210}
+      w={showUnitColumn ? 280 : 210}
     />
   );
 }
 
 export function PatrolPointSelect({ value, onChange }: { value: string; onChange: (v: string | null) => void }) {
-  const points = useQuery({ queryKey: ['patrol-points', 'all'], queryFn: () => patrolPointsApi.list({ limit: 100 }), staleTime: 60_000 });
+  const { unitId, showUnitColumn, unitName } = useUnitScope();
+  const points = useQuery({
+    queryKey: ['patrol-points', 'all', unitId ?? 'all'],
+    queryFn: () => patrolPointsApi.list({ limit: 100, unit_id: unitId }),
+    staleTime: 60_000,
+  });
   return (
     <Select
       aria-label="Filter titik"
       placeholder="Semua titik"
-      data={(points.data?.items ?? []).map((p) => ({ value: String(p.id), label: p.name }))}
+      data={(points.data?.items ?? []).map((p) => ({ value: String(p.id), label: showUnitColumn ? `${p.name} — ${unitName(p.unit_id)}` : p.name }))}
       value={value || null}
       onChange={onChange}
       searchable
       clearable
-      w={200}
+      w={showUnitColumn ? 260 : 200}
     />
   );
 }
 
-/** Only for roles that may call GET /users. */
+/** Users of the picked unit; unit users only get their own unit from the server. */
 export function OfficerSelect({ value, onChange, label = 'petugas' }: { value: string; onChange: (v: string | null) => void; label?: string }) {
-  const users = useQuery({ queryKey: ['users', 'all-officers'], queryFn: () => usersApi.list({ limit: 100 }), staleTime: 60_000 });
+  const { unitId, showUnitColumn } = useUnitScope();
+  const users = useQuery({
+    queryKey: ['users', 'all-officers', unitId ?? 'all'],
+    queryFn: () => usersApi.list({ limit: 100, unit_id: unitId }),
+    staleTime: 60_000,
+  });
   return (
     <Select
       aria-label={`Filter ${label}`}
       placeholder={`Semua ${label}`}
-      data={(users.data?.items ?? []).map((u) => ({ value: String(u.id), label: u.name }))}
+      data={(users.data?.items ?? []).map((u) => ({ value: String(u.id), label: showUnitColumn ? `${u.name} — ${u.unit?.name ?? 'Pusat'}` : u.name }))}
       value={value || null}
       onChange={onChange}
       searchable
       clearable
-      w={200}
+      w={showUnitColumn ? 260 : 200}
     />
   );
 }

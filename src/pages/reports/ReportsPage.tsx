@@ -9,6 +9,7 @@ import { GroupStatusBadge } from '@/components/Badges';
 import { DateRangeFilter, ShiftSelect } from '@/components/Filters';
 import { PageHeader } from '@/components/PageHeader';
 import { CardsSkeleton, EmptyState, ErrorState, TableSkeleton } from '@/components/StateViews';
+import { useUnitScope } from '@/hooks/useUnitScope';
 import { toNumber, useUrlFilters } from '@/hooks/useUrlFilters';
 import type { PatrolGroup } from '@/lib/api/types';
 import { downloadCsv, toCsv } from '@/lib/csv';
@@ -43,10 +44,37 @@ function daily(groups: PatrolGroup[]): DailyRow[] {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+interface UnitRow {
+  id: number;
+  name: string;
+  scanned: number;
+  total: number;
+  scans: number;
+  abnormal: number;
+  missed: number;
+}
+
+function byUnit(groups: PatrolGroup[]): UnitRow[] {
+  const rows = new Map<number, UnitRow>();
+  for (const g of groups) {
+    const row = rows.get(g.unit.id) ?? { id: g.unit.id, name: g.unit.name, scanned: 0, total: 0, scans: 0, abnormal: 0, missed: 0 };
+    row.scans += g.progress.total_scans;
+    row.abnormal += g.progress.abnormal_scans;
+    if (g.status !== 'upcoming') {
+      row.scanned += g.progress.scanned_points;
+      row.total += g.progress.total_points;
+    }
+    if (g.status === 'finished') row.missed += g.progress.unscanned_points;
+    rows.set(g.unit.id, row);
+  }
+  return [...rows.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
 function reportCsv(groups: PatrolGroup[]): string {
   return toCsv(
-    ['Tanggal shift', 'Shift', 'Mulai', 'Selesai', 'Status', 'Titik di-scan', 'Total titik', 'Penyelesaian (%)', 'Total scan', 'Scan tidak normal'],
+    ['Unit', 'Tanggal shift', 'Shift', 'Mulai', 'Selesai', 'Status', 'Titik di-scan', 'Total titik', 'Penyelesaian (%)', 'Total scan', 'Scan tidak normal'],
     groups.map((g) => [
+      g.unit.name,
       g.shift_date,
       g.shift.name,
       formatTime(g.start_at),
@@ -80,22 +108,27 @@ export default function ReportsPage() {
   }));
   const { filters, setFilters } = useUrlFilters(KEYS, defaults);
   const [progress, setProgress] = useState(0);
+  const { unitId, showUnitColumn } = useUnitScope();
 
   const days = dayjs(filters.date_to).diff(dayjs(filters.date_from), 'day') + 1;
   const rangeValid = Boolean(filters.date_from && filters.date_to) && days >= 1 && days <= MAX_DAYS;
   const shiftId = toNumber(filters.shift_id);
 
   const query = useQuery({
-    queryKey: ['patrol-groups', 'report', filters.date_from, filters.date_to, shiftId],
+    queryKey: ['patrol-groups', 'report', unitId ?? 'all', filters.date_from, filters.date_to, shiftId],
     queryFn: ({ signal }) =>
       fetchAllPages(
-        (page, s) => patrolApi.groups({ date_from: filters.date_from, date_to: filters.date_to, shift_id: shiftId, page, limit: MAX_PAGE_SIZE }, s),
+        (page, s) => patrolApi.groups({ unit_id: unitId, date_from: filters.date_from, date_to: filters.date_to, shift_id: shiftId, page, limit: MAX_PAGE_SIZE }, s),
         { signal, onProgress: (loaded) => setProgress(loaded) },
       ),
     enabled: rangeValid,
   });
 
-  const groups = [...(query.data ?? [])].sort((a, b) => a.shift_date.localeCompare(b.shift_date) || a.start_at.localeCompare(b.start_at));
+  // "Semua unit": grouped by unit, then date and shift.
+  const groups = [...(query.data ?? [])].sort(
+    (a, b) => (showUnitColumn ? a.unit.name.localeCompare(b.unit.name) : 0) || a.shift_date.localeCompare(b.shift_date) || a.start_at.localeCompare(b.start_at),
+  );
+  const perUnit = showUnitColumn ? byUnit(groups) : [];
   const rows = daily(groups);
   const started = groups.filter((g) => g.status !== 'upcoming');
   const totals = started.reduce(
@@ -180,6 +213,41 @@ export default function ReportsPage() {
             </Card>
           </SimpleGrid>
 
+          {perUnit.length > 0 && (
+            <Card withBorder radius="md">
+              <Title order={4} mb="sm">Per unit</Title>
+              <Table.ScrollContainer minWidth={640}>
+                <Table>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Unit</Table.Th>
+                      <Table.Th>Penyelesaian</Table.Th>
+                      <Table.Th>Total scan</Table.Th>
+                      <Table.Th>Tidak normal</Table.Th>
+                      <Table.Th>Titik terlewat</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {perUnit.map((u) => (
+                      <Table.Tr key={u.id}>
+                        <Table.Td fw={600}>{u.name}</Table.Td>
+                        <Table.Td>
+                          <Group gap="xs" wrap="nowrap">
+                            <Progress value={percent(u.scanned, u.total)} w={90} size="sm" color={u.scanned === u.total && u.total ? 'teal' : 'blue'} aria-hidden />
+                            <Text size="sm">{u.scanned}/{u.total} ({percent(u.scanned, u.total)}%)</Text>
+                          </Group>
+                        </Table.Td>
+                        <Table.Td>{u.scans}</Table.Td>
+                        <Table.Td>{u.abnormal > 0 ? <Badge color="red">{u.abnormal}</Badge> : 0}</Table.Td>
+                        <Table.Td>{u.missed > 0 ? <Text c="orange" fw={600} size="sm">{u.missed}</Text> : 0}</Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </Table.ScrollContainer>
+            </Card>
+          )}
+
           <Card withBorder radius="md">
             <Title order={4}>Penyelesaian harian (%)</Title>
             <Text size="xs" c="dimmed" mb="sm">Titik yang di-scan dibanding total titik, semua shift yang sudah dimulai pada tanggal tersebut.</Text>
@@ -202,6 +270,7 @@ export default function ReportsPage() {
               <Table>
                 <Table.Thead>
                   <Table.Tr>
+                    {showUnitColumn && <Table.Th>Unit</Table.Th>}
                     <Table.Th>Tanggal</Table.Th>
                     <Table.Th>Shift</Table.Th>
                     <Table.Th>Status</Table.Th>
@@ -215,6 +284,7 @@ export default function ReportsPage() {
                     const pct = percent(g.progress.scanned_points, g.progress.total_points);
                     return (
                       <Table.Tr key={g.id}>
+                        {showUnitColumn && <Table.Td>{g.unit.name}</Table.Td>}
                         <Table.Td>{formatDate(g.shift_date)}</Table.Td>
                         <Table.Td>
                           <Anchor component={Link} to={`/monitoring/${g.id}`} size="sm">{g.shift.name}</Anchor>

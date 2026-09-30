@@ -72,6 +72,11 @@ export function LoginPage() {
                 {apiConfigProblem()}
               </Alert>
             )}
+            {endReason === 'unit_inactive' && !formError && (
+              <Alert color="red" icon={<IconAlertTriangle size={18} />}>
+                Unit Anda sedang dinonaktifkan, hubungi pusat.
+              </Alert>
+            )}
             {endReason === 'forbidden' && !formError && (
               <Alert color="red" icon={<IconAlertTriangle size={18} />}>
                 Akun Anda tidak memiliki akses ke web admin. Gunakan aplikasi mobile.

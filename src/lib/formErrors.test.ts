@@ -18,7 +18,7 @@ describe('applyServerErrors', () => {
     const setError = vi.fn();
     const error = new ApiError(409, 'Conflict', 'nfc code is already used by another patrol point');
     const rest = applyServerErrors<Form>(error, setError, ['nfc_code'], { 'nfc code': 'nfc_code' });
-    expect(setError).toHaveBeenCalledWith('nfc_code', { type: 'server', message: 'Kode NFC sudah dipakai titik patroli lain.' });
+    expect(setError).toHaveBeenCalledWith('nfc_code', { type: 'server', message: 'Kode NFC sudah dipakai (bisa di unit lain).' });
     expect(rest).toEqual([]);
   });
 });

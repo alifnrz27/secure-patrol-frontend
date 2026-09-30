@@ -48,11 +48,30 @@ export interface RoleSummary {
   name: string;
 }
 
+export interface UnitSummary {
+  id: number;
+  code: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  is_active: boolean;
+}
+
+export interface Unit extends UnitSummary {
+  users_count: number;
+  patrol_points_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface User {
   id: number;
   name: string;
   email: string;
   role: RoleSummary;
+  /** null for head office users (Super-Admin, Manager Keamanan) */
+  unit_id: number | null;
+  unit: UnitSummary | null;
   is_active: boolean;
   is_locked: boolean;
   face_photo_url: string | null;
@@ -114,6 +133,7 @@ export interface AppClientCredential extends AppClient {
 
 export interface PatrolPoint {
   id: number;
+  unit_id: number;
   name: string;
   location: string;
   nfc_code: string;
@@ -127,6 +147,7 @@ export interface PatrolPoint {
 
 export interface PatrolShift {
   id: number;
+  unit_id: number;
   name: string;
   start_time: string;
   end_time: string;
@@ -150,6 +171,7 @@ export interface GroupProgress {
 
 export interface PatrolGroup {
   id: number;
+  unit: { id: number; code: string; name: string };
   shift: { id: number; name: string };
   shift_date: string;
   start_at: string;
@@ -161,6 +183,8 @@ export interface PatrolGroup {
 
 export interface PatrolGroupSummary {
   id: number;
+  unit_id: number;
+  unit_name: string;
   shift_id: number;
   shift_name: string;
   shift_date: string;
@@ -251,5 +275,31 @@ export interface AuditLog {
   ip_address: string;
   user_agent: string;
   source: 'api' | 'cli';
+  /** Unit of the user who made the change; null for head office and CLI */
+  unit_id: number | null;
   created_at: string;
+}
+
+export type SettingGroup = 'patrol' | 'face' | 'security';
+export type SettingValue = number | boolean;
+
+export interface Setting {
+  key: string;
+  /** Level of the list: global values, or the values of one unit */
+  level: 'global' | 'unit';
+  /** Head office value the unit follows unless it sets its own */
+  global_value: SettingValue;
+  /** Unit has no own value and follows the head office (always false on the global level) */
+  is_inherited: boolean;
+  group: SettingGroup;
+  type: 'integer' | 'number' | 'boolean';
+  value: SettingValue;
+  default_value: SettingValue;
+  is_default: boolean;
+  min: number | null;
+  max: number | null;
+  unit: string;
+  description: string;
+  updated_by: number | null;
+  updated_at: string | null;
 }

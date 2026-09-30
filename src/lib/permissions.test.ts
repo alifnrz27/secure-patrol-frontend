@@ -1,36 +1,40 @@
 import { describe, expect, it } from 'vitest';
-import { hasPermission, type Permission } from './permissions';
+import { hasPermission, isHeadOfficeRole, type Permission } from './permissions';
 
-const MENUS: [string, Permission][] = [
-  ['Dashboard/Monitoring/Titik per Shift/Riwayat Scan/Laporan', 'viewPatrol'],
-  ['Help Desk', 'manageHelpDesk'],
-  ['Titik Patroli', 'managePatrolPoints'],
-  ['Pengaturan Shift', 'manageShifts'],
-  ['Pengguna', 'manageUsers'],
-  ['Role', 'viewRoles'],
-  ['App Client', 'manageAppClients'],
-  ['Log Aktivitas', 'viewAuditLogs'],
+const ALL: Permission[] = [
+  'viewPatrol', 'viewUnits', 'manageUnits', 'viewPatrolPoints', 'managePatrolPoints', 'viewShifts', 'manageShifts',
+  'viewUsers', 'manageUsers', 'manageHeadOfficeUsers', 'viewRoles', 'manageRoles', 'manageAppClients', 'viewAuditLogs',
+  'viewSettings', 'editSettings', 'viewHelpDeskDrafts', 'manageHelpDesk', 'filterScansByOfficer',
 ];
+const granted = (role: string) => ALL.filter((p) => hasPermission(role, p));
 
-function menusOf(role: string) {
-  return MENUS.filter(([, p]) => hasPermission(role, p)).map(([name]) => name);
-}
-
-describe('menu access per role', () => {
-  it('super_admin sees everything', () => {
-    expect(menusOf('super_admin')).toEqual(MENUS.map(([n]) => n));
+describe('multi-unit access', () => {
+  it('super_admin manages the head office data but not patrol points and shifts', () => {
+    expect(granted('super_admin')).toEqual(ALL.filter((p) => p !== 'managePatrolPoints' && p !== 'manageShifts'));
   });
 
-  it('security_manager sees everything except App Client and Log Aktivitas', () => {
-    expect(menusOf('security_manager')).toEqual(MENUS.map(([n]) => n).filter((n) => n !== 'App Client' && n !== 'Log Aktivitas'));
+  it('security_manager only reads', () => {
+    expect(granted('security_manager')).toEqual([
+      'viewPatrol', 'viewUnits', 'viewPatrolPoints', 'viewShifts', 'viewUsers', 'viewRoles', 'viewAuditLogs', 'viewSettings',
+      'viewHelpDeskDrafts', 'filterScansByOfficer',
+    ]);
   });
 
-  it.each(['security_head', 'security_admin'])('%s sees only the monitoring menus and Help Desk', (role) => {
-    expect(menusOf(role)).toEqual(['Dashboard/Monitoring/Titik per Shift/Riwayat Scan/Laporan', 'Help Desk']);
+  it.each(['security_head', 'security_admin'])('%s manages its own unit', (role) => {
+    expect(granted(role)).toEqual([
+      'viewPatrol', 'viewPatrolPoints', 'managePatrolPoints', 'viewShifts', 'manageShifts', 'viewUsers', 'manageUsers',
+      'viewRoles', 'viewSettings', 'editSettings', 'filterScansByOfficer',
+    ]);
   });
 
   it.each(['security_team', 'custom_role', ''])('%s has no web access', (role) => {
     expect(hasPermission(role, 'webAccess')).toBe(false);
-    expect(menusOf(role)).toEqual([]);
+    expect(granted(role)).toEqual([]);
+  });
+
+  it('knows head office roles', () => {
+    expect(isHeadOfficeRole('super_admin')).toBe(true);
+    expect(isHeadOfficeRole('security_manager')).toBe(true);
+    expect(isHeadOfficeRole('security_head')).toBe(false);
   });
 });
