@@ -1,0 +1,35 @@
+# Rendered by the nginx image at start; ${PORT} comes from the container environment.
+server {
+    listen ${PORT};
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    server_tokens off;
+    client_max_body_size 1m;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Hashed build files never change: cache them for a year.
+    location /assets/ {
+        try_files $uri =404;
+        include /etc/nginx/conf.d/security-headers.inc;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+
+    # SPA fallback: every route is served by index.html, which is not cached so a
+    # new deployment is picked up right away.
+    location / {
+        try_files $uri $uri/ /index.html;
+        include /etc/nginx/conf.d/security-headers.inc;
+        add_header Cache-Control "no-cache" always;
+    }
+}

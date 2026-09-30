@@ -1,0 +1,25 @@
+# Secure Patrol web admin: build and serve on port 9002.
+#
+#   cp .env.example .env   # fill in the values (the file is not committed)
+#   docker compose up -d --build
+#
+# VITE_* values are baked into the build; change them and run `--build` again.
+services:
+  web:
+    build:
+      context: .
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:?set VITE_API_BASE_URL in .env}
+        VITE_APP_ID: ${VITE_APP_ID:?set VITE_APP_ID in .env}
+        VITE_APP_KEY: ${VITE_APP_KEY:?set VITE_APP_KEY in .env}
+    image: secure-patrol-frontend:latest
+    container_name: secure-patrol-frontend
+    restart: unless-stopped
+    environment:
+      PORT: "9002"
+      # Allowed in the Content-Security-Policy connect-src.
+      API_BASE_URL: ${VITE_API_BASE_URL}
+      # Only ${PORT} and ${API_BASE_URL} are substituted in the nginx template.
+      NGINX_ENVSUBST_FILTER: "^(PORT|API_BASE_URL)$"
+    ports:
+      - "${WEB_PORT:-9002}:9002"

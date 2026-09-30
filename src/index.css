@@ -1,0 +1,84 @@
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--mantine-color-gray-0);
+}
+
+:focus-visible {
+  outline: 2px solid var(--mantine-color-blue-6);
+  outline-offset: 2px;
+}
+
+.sp-pin {
+  background: transparent;
+  border: none;
+}
+
+.sp-pin__dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font: 700 10px/1 system-ui, sans-serif;
+}
+
+.leaflet-container:focus-visible {
+  outline: 2px solid var(--mantine-color-blue-6);
+}
+
+.row-warning {
+  background: var(--mantine-color-orange-0);
+}
+
+.row-danger {
+  background: var(--mantine-color-red-0);
+}
+
+.sortable-handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.recent-scan:hover {
+  background: var(--mantine-color-gray-0);
+}
+
+.article-editor .article-editor__content {
+  min-height: 280px;
+  max-height: 55vh;
+  overflow-y: auto;
+  outline: none;
+  padding: 4px 0;
+}
+
+.article-editor .article-editor__content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--mantine-color-dimmed);
+}
+
+.article-editor table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.article-editor th,
+.article-editor td {
+  border: 1px solid var(--mantine-color-gray-4);
+  padding: 4px 8px;
+  vertical-align: top;
+  min-width: 60px;
+}
+
+.article-editor .selectedCell {
+  background: var(--mantine-color-blue-0);
+}
