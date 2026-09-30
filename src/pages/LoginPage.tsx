@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
-import { isEnvConfigured } from '@/config/env';
+import { apiConfigProblem, isEnvConfigured } from '@/config/env';
 import { useSession } from '@/hooks/useSession';
 import { describeError, isApiError } from '@/lib/api/errors';
 import { session } from '@/lib/auth/session';
@@ -64,7 +64,12 @@ export function LoginPage() {
 
             {!isEnvConfigured && (
               <Alert color="red" icon={<IconAlertTriangle size={18} />}>
-                Konfigurasi aplikasi belum lengkap (VITE_API_BASE_URL, VITE_APP_ID, VITE_APP_KEY).
+                Konfigurasi aplikasi belum lengkap (VITE_APP_ID, VITE_APP_KEY).
+              </Alert>
+            )}
+            {apiConfigProblem() && (
+              <Alert color="red" icon={<IconAlertTriangle size={18} />} title="Konfigurasi API">
+                {apiConfigProblem()}
               </Alert>
             )}
             {endReason === 'forbidden' && !formError && (

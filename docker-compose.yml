@@ -1,6 +1,7 @@
-# Secure Patrol web admin: build and serve on port 9002.
+# Secure Patrol web admin on port 9002, talking to the backend on port 9001 of
+# the same server through nginx (/api and /health are proxied).
 #
-#   cp .env.example .env   # fill in the values (the file is not committed)
+#   cp .env.example .env   # fill in VITE_APP_ID and VITE_APP_KEY (not committed)
 #   docker compose up -d --build
 #
 # VITE_* values are baked into the build; change them and run `--build` again.
@@ -9,17 +10,35 @@ services:
     build:
       context: .
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:?set VITE_API_BASE_URL in .env}
-        VITE_APP_ID: ${VITE_APP_ID:?set VITE_APP_ID in .env}
-        VITE_APP_KEY: ${VITE_APP_KEY:?set VITE_APP_KEY in .env}
+        # Empty = same origin through the proxy below (recommended).
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+        # Checked by the Dockerfile at build time, not here, so `down`, `logs` and
+        # `ps` keep working even when .env is incomplete.
+        VITE_APP_ID: ${VITE_APP_ID:-}
+        VITE_APP_KEY: ${VITE_APP_KEY:-}
     image: secure-patrol-frontend:latest
     container_name: secure-patrol-frontend
     restart: unless-stopped
     environment:
       PORT: "9002"
-      # Allowed in the Content-Security-Policy connect-src.
-      API_BASE_URL: ${VITE_API_BASE_URL}
-      # Only ${PORT} and ${API_BASE_URL} are substituted in the nginx template.
-      NGINX_ENVSUBST_FILTER: "^(PORT|API_BASE_URL)$"
+      # Backend as seen from inside the container. host.docker.internal is the
+      # Docker host (mapped below), i.e. the backend on port 9001 of this server.
+      BACKEND_UPSTREAM: ${BACKEND_UPSTREAM:-http://host.docker.internal:9001}
+      # Extra origin allowed in the CSP connect-src (only needed with VITE_API_BASE_URL).
+      API_BASE_URL: ${VITE_API_BASE_URL:-}
+      # Only these variables are substituted in the nginx templates.
+      NGINX_ENVSUBST_FILTER: "^(PORT|API_BASE_URL|BACKEND_UPSTREAM)$"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${WEB_PORT:-9002}:9002"
+    networks:
+      - web
+
+networks:
+  web:
+    ipam:
+      config:
+        # Fixed range so the backend can trust exactly this proxy:
+        # TRUSTED_PROXIES=172.30.90.0/24 (see README).
+        - subnet: 172.30.90.0/24

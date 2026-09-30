@@ -1,4 +1,4 @@
-import { env } from '@/config/env';
+import { apiOrigin, env } from '@/config/env';
 import { updateClockFromResponse, serverTimestampSeconds } from './clock';
 import { APP_AUTH_ERRORS, ApiError } from './errors';
 import { randomNonce, serializeFormData, serializeJson, signRequest, type PreparedBody } from './signing';
@@ -36,7 +36,7 @@ export function setAuthHandler(handler: AuthHandler | null): void {
 
 export function buildApiUrl(path: string, query?: QueryParams): URL {
   const fullPath = path.startsWith('/api/') ? path : `/api/v1${path.startsWith('/') ? path : `/${path}`}`;
-  const url = new URL(env.apiBaseUrl + fullPath);
+  const url = new URL(apiOrigin() + fullPath);
   if (query) {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query)) {
@@ -162,7 +162,7 @@ export async function syncClockWithServer(timeoutMs = 4000): Promise<void> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(`${env.apiBaseUrl}/health`, { signal: controller.signal, cache: 'no-store', credentials: 'omit' });
+    const response = await fetch(`${apiOrigin()}/health`, { signal: controller.signal, cache: 'no-store', credentials: 'omit' });
     updateClockFromResponse(response, true);
   } catch {
     // The first signed request will correct the clock through the 401 retry.

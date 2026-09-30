@@ -1,3 +1,5 @@
+import { apiOrigin } from '@/config/env';
+
 export type ApiErrorKind =
   | 'network'
   | 'app'
@@ -112,7 +114,8 @@ export function describeError(error: unknown): string {
   if (!isApiError(error)) return 'Terjadi gangguan, coba lagi.';
   switch (error.kind) {
     case 'network':
-      return 'Terjadi gangguan koneksi, coba lagi.';
+      // Name the server so a wrong or unreachable API address is visible without DevTools.
+      return `Tidak bisa terhubung ke server API (${apiOrigin()}). Periksa koneksi dan pastikan server berjalan, lalu coba lagi.`;
     case 'server':
       return 'Terjadi gangguan di server, coba lagi.';
     case 'app':

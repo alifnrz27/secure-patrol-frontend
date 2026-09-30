@@ -23,23 +23,39 @@ App Key ikut terbawa di bundle JavaScript, jadi tidak benar-benar rahasia. Perli
 role, dan pembatasan platform. Pakai App Client web tersendiri agar bisa dirotasi tanpa mengganggu aplikasi mobile.
 File `.env*` tidak di-commit (kecuali `.env.example`).
 
-## Deploy dengan Docker Compose (port 9002)
+## Deploy dengan Docker Compose (web 9002, backend 9001 di server yang sama)
 
 ```bash
-cp .env.example .env        # isi VITE_API_BASE_URL, VITE_APP_ID, VITE_APP_KEY
+cp .env.example .env        # isi VITE_APP_ID dan VITE_APP_KEY; VITE_API_BASE_URL dibiarkan kosong
 docker compose up -d --build
 # buka http://<server>:9002
 ```
 
-- `VITE_API_BASE_URL` adalah alamat backend **yang dibuka browser pengguna** (mis. `https://api.domain.com`), bukan
-  `localhost` milik server.
+Alur request: browser → `:9002` (nginx di container) → `/api/...` dan `/health` diteruskan ke backend
+`http://host.docker.internal:9001` (port 9001 di host yang sama). Path dan body diteruskan apa adanya, sehingga
+signature tetap valid. Karena satu origin, tidak ada CORS dan web tidak perlu tahu IP/domain server saat build.
+
+**Pengaturan di backend** (`.env` backend, lalu restart) agar Log Aktivitas mencatat IP pengguna, bukan IP container:
+
+```
+PROXY_HEADER = "X-Real-IP"
+TRUSTED_PROXIES = "172.30.90.0/24"
+```
+
+`X-Real-IP` selalu diisi ulang oleh nginx sehingga tidak bisa dipalsukan dari browser, dan `172.30.90.0/24` adalah
+subnet tetap jaringan compose. Aplikasi mobile yang langsung ke port 9001 tidak terpengaruh.
+
+Catatan:
+- Backend harus listen di semua interface (default `:9001`), dan firewall host (mis. `ufw`) harus mengizinkan akses
+  dari subnet Docker ke port 9001.
+- Jika backend berjalan di container lain, `BACKEND_UPSTREAM` bisa diisi alamat service tersebut.
+- Opsi lain: isi `VITE_API_BASE_URL=http://<ip-atau-domain>:9001` agar browser langsung memanggil backend (lewat CORS,
+  port 9001 harus bisa diakses pengguna).
 - Nilai `VITE_*` dimasukkan saat build. Setelah mengubah `.env`, jalankan lagi `docker compose up -d --build`.
-- Image: build dengan Node 22, lalu disajikan oleh nginx (`docker/nginx.conf.template`) dengan SPA fallback, gzip,
-  cache 1 tahun untuk `/assets`, `index.html` tanpa cache, dan header keamanan (`docker/security-headers.inc.template`,
-  CSP `connect-src` otomatis diisi dari `VITE_API_BASE_URL`).
-- Health check: `GET /healthz`. Port di host bisa diganti dengan `WEB_PORT` di `.env`.
-- Untuk HTTPS, pasang reverse proxy (mis. nginx/Caddy/Traefik di host) di depan port 9002. HTTPS juga membuat Web Locks
-  aktif untuk refresh token lintas tab.
+- nginx juga menyajikan SPA fallback, gzip, cache 1 tahun untuk `/assets`, `index.html` tanpa cache, header keamanan
+  (`docker/security-headers.inc.template`), dan health check `GET /healthz`. Port host bisa diganti lewat `WEB_PORT`.
+- Untuk HTTPS, pasang reverse proxy di depan port 9002. HTTPS juga membuat Web Locks aktif untuk refresh token lintas tab.
+- Development tanpa CORS: `VITE_API_BASE_URL= DEV_API_PROXY=http://127.0.0.1:9001 npm run dev`.
 
 ## Stack
 

@@ -4,9 +4,15 @@ import { apiFetch, setAuthHandler } from './client';
 import { resetClockForTests, serverNow } from './clock';
 import { signRequest } from './signing';
 
-vi.mock('@/config/env', () => ({
+const mockEnv = vi.hoisted(() => ({
   env: { apiBaseUrl: 'http://api.test', appId: 'sp_web_test', appKey: 'spk_TEST-ONLY-4pZt7Qm2Xv9Lr3Ks8Wd1Nf6Hy0Bc5Ja' },
+  pageOrigin: 'http://admin.test:9002',
+}));
+
+vi.mock('@/config/env', () => ({
+  env: mockEnv.env,
   isEnvConfigured: true,
+  apiOrigin: () => mockEnv.env.apiBaseUrl || mockEnv.pageOrigin,
 }));
 
 type Call = { url: string; init: RequestInit & { headers: Record<string, string> } };
@@ -51,6 +57,20 @@ describe('apiFetch', () => {
     expect(h.Authorization).toBe('Bearer token-1');
     expect(h['X-Signature']).toBe(
       signRequest({ method: 'GET', requestUri: '/api/v1/users?page=2&search=budi+santoso', timestamp: h['X-Timestamp']!, nonce: h['X-Nonce']!, body: new Uint8Array(0), appKey: 'spk_TEST-ONLY-4pZt7Qm2Xv9Lr3Ks8Wd1Nf6Hy0Bc5Ja' }),
+    );
+  });
+
+  it('uses the page origin when no API base URL is set (reverse proxy), signing the same path', async () => {
+    mockEnv.env.apiBaseUrl = '';
+    try {
+      await apiFetch('/patrol-scans', { query: { page: 1 } });
+    } finally {
+      mockEnv.env.apiBaseUrl = 'http://api.test';
+    }
+    const { url, init } = calls[0]!;
+    expect(url).toBe('http://admin.test:9002/api/v1/patrol-scans?page=1');
+    expect(init.headers['X-Signature']).toBe(
+      signRequest({ method: 'GET', requestUri: '/api/v1/patrol-scans?page=1', timestamp: init.headers['X-Timestamp']!, nonce: init.headers['X-Nonce']!, body: new Uint8Array(0), appKey: 'spk_TEST-ONLY-4pZt7Qm2Xv9Lr3Ks8Wd1Nf6Hy0Bc5Ja' }),
     );
   });
 

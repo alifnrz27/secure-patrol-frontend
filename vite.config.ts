@@ -30,7 +30,14 @@ export default defineConfig(({ mode }) => {
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
-  server: { port: 5173 },
+  server: {
+    port: 5173,
+    // Optional: DEV_API_PROXY=http://127.0.0.1:3010 with an empty VITE_API_BASE_URL
+    // mirrors the Docker setup (same origin, /api and /health proxied unchanged).
+    proxy: process.env.DEV_API_PROXY
+      ? { '/api': { target: process.env.DEV_API_PROXY }, '/health': { target: process.env.DEV_API_PROXY } }
+      : undefined,
+  },
   preview: {
     port: 4173,
     headers: {
