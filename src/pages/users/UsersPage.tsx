@@ -24,7 +24,7 @@ const KEYS = ['search', 'role_id', 'is_active', 'head_office', 'page', 'limit'] 
 
 export default function UsersPage() {
   const { user: me } = useSession();
-  const isSuperAdmin = usePermission('manageHeadOfficeUsers');
+  const canManageHeadOffice = usePermission('manageHeadOfficeUsers');
   const canManage = usePermission('manageUsers');
   const { isHeadOffice, unitId, showUnitColumn } = useUnitScope();
   const queryClient = useQueryClient();
@@ -61,8 +61,8 @@ export default function UsersPage() {
     setFormOpen(true);
   };
 
-  // Only the Super-Admin manages head office users; unit managers only see their unit anyway.
-  const canTouch = (user: User) => canManage && (isSuperAdmin || !isHeadOfficeRole(user.role.code));
+  // Only head office managers (Super-Admin, Manager) manage head office users; unit managers only see their unit.
+  const canTouch = (user: User) => canManage && (canManageHeadOffice || !isHeadOfficeRole(user.role.code));
   const roleOptions = (roles.data?.items ?? []).map((r) => ({ value: String(r.id), label: r.name }));
 
   return (
@@ -199,7 +199,7 @@ export default function UsersPage() {
 
       <Modal opened={formOpen} onClose={() => setFormOpen(false)} title={formUser ? 'Ubah Pengguna' : 'Tambah Pengguna'} size="lg" centered>
         {formOpen && roles.data && me && (
-          <UserForm user={formUser} roles={roles.data.items} currentUserId={me.id} isSuperAdmin={isSuperAdmin} defaultUnitId={unitId} onDone={() => setFormOpen(false)} />
+          <UserForm user={formUser} roles={roles.data.items} currentUserId={me.id} canManageHeadOffice={canManageHeadOffice} defaultUnitId={unitId} onDone={() => setFormOpen(false)} />
         )}
       </Modal>
       <ResetPasswordModal user={resetUser} onClose={() => setResetUser(null)} />

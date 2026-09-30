@@ -123,12 +123,12 @@ src/
 | Fitur | super_admin | security_manager | security_head / security_admin |
 |---|---|---|---|
 | Dashboard, Monitoring, Titik per Shift, Riwayat Scan, Laporan, Export | semua unit | semua unit | unit sendiri |
-| Unit: lihat / kelola | ✓ / ✓ | ✓ / – | – / – |
+| Unit: lihat / kelola | ✓ / ✓ | ✓ / ✓ | – / – (menu tidak tampil) |
 | Titik Patroli, Pengaturan Shift: lihat / kelola | ✓ / – | ✓ / – | ✓ / ✓ |
-| Pengguna: lihat / kelola | ✓ / ✓ | ✓ / – | ✓ / ✓ (role unit saja) |
-| Role: lihat / kelola | ✓ / ✓ | ✓ / – | ✓ / – |
+| Pengguna: lihat / kelola | ✓ / ✓ | ✓ / ✓ (seperti Super-Admin) | ✓ / ✓ (role unit saja) |
+| Role | ✓ | – | – |
 | App Client | ✓ | – | – |
-| Log Aktivitas | ✓ | ✓ | – |
+| Log Aktivitas | ✓ | – | – |
 | Pengaturan: lihat / ubah | ✓ / nilai global | ✓ / – | ✓ / nilai unit sendiri |
 | Help Desk: draft / kelola | ✓ / ✓ | ✓ / – | – / – |
 
@@ -207,6 +207,30 @@ dengan jalur yang sudah diuji), serta drag & drop dengan keyboard (sudah didukun
 - Semua peta dibungkus `isolation: isolate` agar z-index Leaflet tidak menimpa drawer, modal, atau menu.
 
 ## Permintaan ke backend
+
+0. **Manager Keamanan mengelola unit** (keputusan produk terbaru). Web sudah menampilkan tombol tambah/ubah/hapus unit
+   untuk Manager, tetapi backend masih menolak dengan 403. Ubah `modules/unit/http/routes.go`:
+
+   ```go
+   headOffice := middleware.RequireRoles(models.RoleSuperAdmin, models.RoleSecurityManager)
+   app.Post("/units", webOnly, headOffice, handler.CreateUnit)
+   app.Put("/units/:id", webOnly, headOffice, handler.UpdateUnit)
+   app.Delete("/units/:id", webOnly, headOffice, handler.DeleteUnit)
+   ```
+
+   dan deskripsi akses di `docs/openapi.yaml` (`/units` POST, `/units/{id}` PUT/DELETE). Role unit tetap tidak bisa.
+
+0b. **Manager Keamanan mengelola pengguna seperti Super-Admin.** Web sudah menampilkan tombol kelola pengguna, field
+   Unit, dan role pusat untuk Manager; backend masih menolak:
+   - `modules/user/http/routes.go`: `canManage` tambahkan `models.RoleSecurityManager`.
+   - `modules/user/service/service_impl.go`: `checkAssignableRole` dan `checkManageableUser` saat ini hanya
+     mengizinkan `RoleSuperAdmin` untuk role/akun pusat; izinkan juga `RoleSecurityManager`.
+   - **Perhatian keamanan:** dengan aturan ini Manager bisa membuat akun Super-Admin baru (naik hak akses). Jika tidak
+     diinginkan, batasi agar Manager tidak bisa memberi/mengubah role `super_admin`.
+
+0c. **Role dan Log Aktivitas khusus Super-Admin** (menu web sudah disembunyikan). Saat ini `GET /audit-logs` dan
+   `GET /roles` masih bisa dibaca role lain. `GET /roles` tetap dibutuhkan form Pengguna (daftar role), jadi cukup
+   batasi `GET /audit-logs` ke Super-Admin.
 
 1. ~~Daftar petugas untuk Kepala/Admin Keamanan~~ — **sudah terpenuhi**: `GET /users` kini dibatasi per unit oleh
    server, sehingga filter "Petugas" tersedia untuk semua role web. Usulan awal (untuk arsip):

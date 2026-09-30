@@ -51,13 +51,13 @@ interface UserFormProps {
   user: User | null;
   roles: Role[];
   currentUserId: number;
-  isSuperAdmin: boolean;
+  canManageHeadOffice: boolean;
   /** Unit picked in the header; preselected for new unit users. */
   defaultUnitId?: number;
   onDone: () => void;
 }
 
-export function UserForm({ user, roles, currentUserId, isSuperAdmin, defaultUnitId, onDone }: UserFormProps) {
+export function UserForm({ user, roles, currentUserId, canManageHeadOffice, defaultUnitId, onDone }: UserFormProps) {
   const queryClient = useQueryClient();
   const isSelf = user?.id === currentUserId;
   const units = useUnits();
@@ -76,9 +76,9 @@ export function UserForm({ user, roles, currentUserId, isSuperAdmin, defaultUnit
   });
 
   const selectedRole = roles.find((r) => String(r.id) === watch('role_id'));
-  // Only the Super-Admin picks a unit, and only for unit roles; head office
+  // Only head office managers pick a unit, and only for unit roles; head office
   // roles have no unit and unit managers always create users in their unit.
-  const needsUnit = isSuperAdmin && Boolean(selectedRole) && !isHeadOfficeRole(selectedRole?.code);
+  const needsUnit = canManageHeadOffice && Boolean(selectedRole) && !isHeadOfficeRole(selectedRole?.code);
   const movedUnit = Boolean(user?.unit_id) && needsUnit && watch('unit_id') !== String(user?.unit_id ?? '');
 
   const mutation = useMutation({
@@ -112,7 +112,7 @@ export function UserForm({ user, roles, currentUserId, isSuperAdmin, defaultUnit
   // Head office roles (Super-Admin, Manager Keamanan) are assigned only by the
   // Super-Admin. Inactive roles are rejected, except the one the user already has.
   const roleOptions = roles
-    .filter((r) => (isSuperAdmin || !isHeadOfficeRole(r.code)) && (r.is_active || r.id === user?.role.id))
+    .filter((r) => (canManageHeadOffice || !isHeadOfficeRole(r.code)) && (r.is_active || r.id === user?.role.id))
     .map((r) => ({ value: String(r.id), label: r.is_active ? r.name : `${r.name} (nonaktif)` }));
 
   const roleChanged = user && watch('role_id') !== String(user.role.id);

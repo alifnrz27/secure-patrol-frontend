@@ -10,12 +10,12 @@ import type { RoleCode } from '@/lib/api/types';
 // | Fitur                                     | super_admin | security_manager | security_head / security_admin |
 // | Dashboard, Monitoring, Titik per Shift,   |  semua unit |    semua unit    |          unit sendiri          |
 // |   Riwayat Scan, Laporan, Export           |             |                  |                                |
-// | Unit: lihat / kelola                      |    ✓ / ✓    |      ✓ / -       |             - / -              |
+// | Unit: lihat / kelola                      |    ✓ / ✓    |      ✓ / ✓       |             - / -              |
 // | Titik Patroli, Shift: lihat / kelola      |    ✓ / -    |      ✓ / -       |             ✓ / ✓              |
-// | Pengguna: lihat / kelola                  |    ✓ / ✓    |      ✓ / -       |   ✓ / ✓ (role unit saja)       |
-// | Role: lihat / kelola                      |    ✓ / ✓    |      ✓ / -       |             ✓ / -              |
+// | Pengguna: lihat / kelola                  |    ✓ / ✓    |      ✓ / ✓       |   ✓ / ✓ (role unit saja)       |
+// | Role (menu): lihat / kelola               |    ✓ / ✓    |                  |                                |
 // | App Client                                |      ✓      |                  |                                |
-// | Log Aktivitas                             |      ✓      |        ✓         |                                |
+// | Log Aktivitas                             |      ✓      |                  |                                |
 // | Pengaturan: lihat / ubah                  | ✓ / global  |      ✓ / -       |       ✓ / unit sendiri         |
 // | Help Desk: draft / kelola                 |    ✓ / ✓    |      ✓ / -       |             - / -              |
 
@@ -28,19 +28,22 @@ export const PERMISSIONS = {
   webAccess: WEB_USERS,
   viewPatrol: WEB_USERS,
   viewUnits: HEAD_OFFICE_ROLES,
-  manageUnits: SUPER_ADMIN,
+  // Both head office roles manage the unit master data; unit roles cannot even open it.
+  manageUnits: HEAD_OFFICE_ROLES,
   viewPatrolPoints: WEB_USERS,
   managePatrolPoints: UNIT_MANAGERS,
   viewShifts: WEB_USERS,
   manageShifts: UNIT_MANAGERS,
   viewUsers: WEB_USERS,
-  manageUsers: [...SUPER_ADMIN, ...UNIT_MANAGERS],
+  // The Manager manages users like the Super-Admin (head office users, any unit).
+  manageUsers: [...HEAD_OFFICE_ROLES, ...UNIT_MANAGERS],
   /** Assign head office roles (super_admin, security_manager) and pick a user's unit. */
-  manageHeadOfficeUsers: SUPER_ADMIN,
-  viewRoles: WEB_USERS,
+  manageHeadOfficeUsers: HEAD_OFFICE_ROLES,
+  // Menu only: the user form still reads GET /roles for its role list.
+  viewRoles: SUPER_ADMIN,
   manageRoles: SUPER_ADMIN,
   manageAppClients: SUPER_ADMIN,
-  viewAuditLogs: HEAD_OFFICE_ROLES,
+  viewAuditLogs: SUPER_ADMIN,
   viewSettings: WEB_USERS,
   /** Super-Admin edits the global values, unit managers the values of their unit. */
   editSettings: [...SUPER_ADMIN, ...UNIT_MANAGERS],

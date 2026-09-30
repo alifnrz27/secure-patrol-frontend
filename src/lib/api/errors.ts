@@ -107,6 +107,7 @@ const SERVER_MESSAGES_ID: Record<string, string> = {
   'this role is not allowed to use the web admin': 'Akun Anda tidak memiliki akses ke web admin. Gunakan aplikasi mobile.',
   'your role is not allowed to sign in on this platform': 'Akun Anda tidak memiliki akses ke web admin. Gunakan aplikasi mobile.',
   'your unit is inactive, contact the head office': 'Unit Anda sedang dinonaktifkan, hubungi pusat.',
+  'You do not have access to this resource': 'Role Anda tidak diizinkan melakukan aksi ini.',
   'unit code is already used by another unit': 'Kode unit sudah dipakai unit lain.',
   'unit still has users or patrol points, move or delete them first':
     'Unit masih memiliki pengguna atau titik patroli. Pindahkan atau hapus datanya dulu, atau nonaktifkan unit ini.',

@@ -13,17 +13,17 @@ describe('multi-unit access', () => {
     expect(granted('super_admin')).toEqual(ALL.filter((p) => p !== 'managePatrolPoints' && p !== 'manageShifts'));
   });
 
-  it('security_manager only reads', () => {
+  it('security_manager manages units and users like the Super-Admin, without roles, app clients and audit log', () => {
     expect(granted('security_manager')).toEqual([
-      'viewPatrol', 'viewUnits', 'viewPatrolPoints', 'viewShifts', 'viewUsers', 'viewRoles', 'viewAuditLogs', 'viewSettings',
-      'viewHelpDeskDrafts', 'filterScansByOfficer',
+      'viewPatrol', 'viewUnits', 'manageUnits', 'viewPatrolPoints', 'viewShifts', 'viewUsers', 'manageUsers', 'manageHeadOfficeUsers',
+      'viewSettings', 'viewHelpDeskDrafts', 'filterScansByOfficer',
     ]);
   });
 
   it.each(['security_head', 'security_admin'])('%s manages its own unit', (role) => {
     expect(granted(role)).toEqual([
       'viewPatrol', 'viewPatrolPoints', 'managePatrolPoints', 'viewShifts', 'manageShifts', 'viewUsers', 'manageUsers',
-      'viewRoles', 'viewSettings', 'editSettings', 'filterScansByOfficer',
+      'viewSettings', 'editSettings', 'filterScansByOfficer',
     ]);
   });
 
