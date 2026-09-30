@@ -123,11 +123,11 @@ src/
 | Fitur | super_admin | security_manager | security_head / security_admin |
 |---|---|---|---|
 | Dashboard, Monitoring, Titik per Shift, Riwayat Scan, Laporan, Export | semua unit | semua unit | unit sendiri |
-| Unit: lihat / kelola | ✓ / ✓ | ✓ / ✓ | – / – (menu tidak tampil) |
+| Unit: lihat / tambah, ubah, hapus | ✓ / ✓ | ✓ / – | – / – (menu tidak tampil) |
 | Titik Patroli, Pengaturan Shift: lihat / kelola | ✓ / – | ✓ / – | ✓ / ✓ |
 | Pengguna: lihat / kelola | ✓ / ✓ | ✓ / ✓ (seperti Super-Admin) | ✓ / ✓ (role unit saja) |
 | Role | ✓ | – | – |
-| App Client | ✓ | – | – |
+| App Client, Tampilan Aplikasi | ✓ | – | – |
 | Log Aktivitas | ✓ | – | – |
 | Pengaturan: lihat / ubah | ✓ / nilai global | ✓ / – | ✓ / nilai unit sendiri |
 | Help Desk: draft / kelola | ✓ / ✓ | ✓ / – | – / – |
@@ -144,6 +144,11 @@ src/
   "Ikuti nilai pusat" (`null`). Manager hanya membaca.
 - **Pengguna**: field Unit hanya untuk Super-Admin dan hanya jika role yang dipilih role unit; role pusat
   disembunyikan dari Kepala/Admin Keamanan; memindahkan unit menampilkan peringatan keluar dari semua perangkat.
+- **Tampilan Aplikasi** (Pengaturan → Tampilan Aplikasi, khusus Super-Admin): nama aplikasi (maks 100) dan logo
+  JPEG/PNG maks 1 MB (dicek sebelum upload, dengan pratinjau), atau "Pakai logo bawaan" (`remove_logo=true`).
+  `GET /branding` (tanpa login) dimuat saat aplikasi dibuka dan di-cache di `localStorage`; nama/logo dipakai di
+  halaman login, header, `document.title` ("Dashboard — {nama}"), dan favicon. Setelah disimpan, semuanya langsung
+  berubah tanpa reload (`src/lib/branding.ts`).
 - **Ekspor Excel**: dialog berisi field Unit untuk user pusat (awal dari pemilih unit); CSV ikut `unit_id` pemilih dan
   punya kolom Unit.
 
@@ -207,18 +212,6 @@ dengan jalur yang sudah diuji), serta drag & drop dengan keyboard (sudah didukun
 - Semua peta dibungkus `isolation: isolate` agar z-index Leaflet tidak menimpa drawer, modal, atau menu.
 
 ## Permintaan ke backend
-
-0. **Manager Keamanan mengelola unit** (keputusan produk terbaru). Web sudah menampilkan tombol tambah/ubah/hapus unit
-   untuk Manager, tetapi backend masih menolak dengan 403. Ubah `modules/unit/http/routes.go`:
-
-   ```go
-   headOffice := middleware.RequireRoles(models.RoleSuperAdmin, models.RoleSecurityManager)
-   app.Post("/units", webOnly, headOffice, handler.CreateUnit)
-   app.Put("/units/:id", webOnly, headOffice, handler.UpdateUnit)
-   app.Delete("/units/:id", webOnly, headOffice, handler.DeleteUnit)
-   ```
-
-   dan deskripsi akses di `docs/openapi.yaml` (`/units` POST, `/units/{id}` PUT/DELETE). Role unit tetap tidak bisa.
 
 0b. **Manager Keamanan mengelola pengguna seperti Super-Admin.** Web sudah menampilkan tombol kelola pengguna, field
    Unit, dan role pusat untuk Manager; backend masih menolak:

@@ -8,7 +8,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
 import { session } from './lib/auth/session';
+import { branding } from './lib/branding';
 
+void branding.load();
 void session.start();
 
 createRoot(document.getElementById('root')!).render(

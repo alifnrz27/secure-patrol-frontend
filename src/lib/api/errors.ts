@@ -113,6 +113,8 @@ const SERVER_MESSAGES_ID: Record<string, string> = {
     'Unit masih memiliki pengguna atau titik patroli. Pindahkan atau hapus datanya dulu, atau nonaktifkan unit ini.',
   'unit_id is required for this role': 'Unit wajib dipilih untuk role ini.',
   'unit not found': 'Unit tidak ditemukan.',
+  'logo size must not exceed 1 MB': 'Ukuran logo maksimal 1 MB.',
+  'app_name must not be empty': 'Nama aplikasi wajib diisi.',
   'patrol points are managed by each unit': 'Titik patroli dikelola oleh masing-masing unit.',
   'shifts are managed by each unit': 'Shift dikelola oleh masing-masing unit.',
   'password must be 8-72 characters and contain at least one letter and one digit': 'Password harus 8–72 karakter dan mengandung huruf serta angka.',

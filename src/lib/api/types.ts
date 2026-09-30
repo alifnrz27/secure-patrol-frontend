@@ -303,3 +303,12 @@ export interface Setting {
   updated_by: number | null;
   updated_at: string | null;
 }
+
+export interface Branding {
+  app_name: string;
+  /** Standard base64; null = the app's built-in logo */
+  logo_base64: string | null;
+  logo_mime_type: 'image/jpeg' | 'image/png' | null;
+  logo_updated_at: string | null;
+  updated_at: string;
+}

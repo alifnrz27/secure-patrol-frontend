@@ -4,7 +4,7 @@ import { hasPermission, isHeadOfficeRole, type Permission } from './permissions'
 const ALL: Permission[] = [
   'viewPatrol', 'viewUnits', 'manageUnits', 'viewPatrolPoints', 'managePatrolPoints', 'viewShifts', 'manageShifts',
   'viewUsers', 'manageUsers', 'manageHeadOfficeUsers', 'viewRoles', 'manageRoles', 'manageAppClients', 'viewAuditLogs',
-  'viewSettings', 'editSettings', 'viewHelpDeskDrafts', 'manageHelpDesk', 'filterScansByOfficer',
+  'viewSettings', 'editSettings', 'viewHelpDeskDrafts', 'manageHelpDesk', 'filterScansByOfficer', 'manageBranding',
 ];
 const granted = (role: string) => ALL.filter((p) => hasPermission(role, p));
 
@@ -13,9 +13,9 @@ describe('multi-unit access', () => {
     expect(granted('super_admin')).toEqual(ALL.filter((p) => p !== 'managePatrolPoints' && p !== 'manageShifts'));
   });
 
-  it('security_manager manages units and users like the Super-Admin, without roles, app clients and audit log', () => {
+  it('security_manager views units and manages users like the Super-Admin, without roles, app clients and audit log', () => {
     expect(granted('security_manager')).toEqual([
-      'viewPatrol', 'viewUnits', 'manageUnits', 'viewPatrolPoints', 'viewShifts', 'viewUsers', 'manageUsers', 'manageHeadOfficeUsers',
+      'viewPatrol', 'viewUnits', 'viewPatrolPoints', 'viewShifts', 'viewUsers', 'manageUsers', 'manageHeadOfficeUsers',
       'viewSettings', 'viewHelpDeskDrafts', 'filterScansByOfficer',
     ]);
   });

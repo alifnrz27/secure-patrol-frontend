@@ -10,11 +10,11 @@ import type { RoleCode } from '@/lib/api/types';
 // | Fitur                                     | super_admin | security_manager | security_head / security_admin |
 // | Dashboard, Monitoring, Titik per Shift,   |  semua unit |    semua unit    |          unit sendiri          |
 // |   Riwayat Scan, Laporan, Export           |             |                  |                                |
-// | Unit: lihat / kelola                      |    ✓ / ✓    |      ✓ / ✓       |             - / -              |
+// | Unit: lihat / kelola                      |    ✓ / ✓    |      ✓ / -       |             - / -              |
 // | Titik Patroli, Shift: lihat / kelola      |    ✓ / -    |      ✓ / -       |             ✓ / ✓              |
 // | Pengguna: lihat / kelola                  |    ✓ / ✓    |      ✓ / ✓       |   ✓ / ✓ (role unit saja)       |
 // | Role (menu): lihat / kelola               |    ✓ / ✓    |                  |                                |
-// | App Client                                |      ✓      |                  |                                |
+// | App Client, Tampilan Aplikasi             |      ✓      |                  |                                |
 // | Log Aktivitas                             |      ✓      |                  |                                |
 // | Pengaturan: lihat / ubah                  | ✓ / global  |      ✓ / -       |       ✓ / unit sendiri         |
 // | Help Desk: draft / kelola                 |    ✓ / ✓    |      ✓ / -       |             - / -              |
@@ -28,8 +28,8 @@ export const PERMISSIONS = {
   webAccess: WEB_USERS,
   viewPatrol: WEB_USERS,
   viewUnits: HEAD_OFFICE_ROLES,
-  // Both head office roles manage the unit master data; unit roles cannot even open it.
-  manageUnits: HEAD_OFFICE_ROLES,
+  // Create, edit (incl. deactivate) and delete: Super-Admin only. Unit roles cannot even open the page.
+  manageUnits: SUPER_ADMIN,
   viewPatrolPoints: WEB_USERS,
   managePatrolPoints: UNIT_MANAGERS,
   viewShifts: WEB_USERS,
@@ -43,6 +43,8 @@ export const PERMISSIONS = {
   viewRoles: SUPER_ADMIN,
   manageRoles: SUPER_ADMIN,
   manageAppClients: SUPER_ADMIN,
+  /** App name and logo (Pengaturan → Tampilan Aplikasi). */
+  manageBranding: SUPER_ADMIN,
   viewAuditLogs: SUPER_ADMIN,
   viewSettings: WEB_USERS,
   /** Super-Admin edits the global values, unit managers the values of their unit. */

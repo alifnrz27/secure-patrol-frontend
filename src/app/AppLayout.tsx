@@ -2,6 +2,7 @@ import { AppShell, Burger, Divider, Group, Menu, NavLink, ScrollArea, Text, Unst
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import {
+  IconAdjustments,
   IconApps,
   IconBuilding,
   IconCalendarTime,
@@ -14,8 +15,8 @@ import {
   IconListCheck,
   IconLogout,
   IconMapPin,
+  IconPalette,
   IconSettings,
-  IconShieldCheck,
   IconUser,
   IconUserShield,
   IconUsers,
@@ -23,7 +24,9 @@ import {
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { BrandLogo } from '@/components/BrandLogo';
 import { UnitPicker } from '@/components/UnitPicker';
+import { useBranding } from '@/hooks/useBranding';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useSession } from '@/hooks/useSession';
 import { describeError } from '@/lib/api/errors';
@@ -35,6 +38,8 @@ interface NavItem {
   label: string;
   icon: ReactNode;
   permission?: Permission;
+  /** Sub menu; a parent with one visible child is shown as that single link. */
+  children?: NavItem[];
 }
 
 const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
@@ -57,7 +62,15 @@ const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
       { to: '/roles', label: 'Role', icon: <IconUserShield size={18} />, permission: 'viewRoles' },
       { to: '/app-clients', label: 'App Client', icon: <IconApps size={18} />, permission: 'manageAppClients' },
       { to: '/audit-logs', label: 'Log Aktivitas', icon: <IconFileText size={18} />, permission: 'viewAuditLogs' },
-      { to: '/settings', label: 'Pengaturan', icon: <IconSettings size={18} />, permission: 'viewSettings' },
+      {
+        to: '/settings',
+        label: 'Pengaturan',
+        icon: <IconSettings size={18} />,
+        children: [
+          { to: '/settings', label: 'Pengaturan Sistem', icon: <IconAdjustments size={16} />, permission: 'viewSettings' },
+          { to: '/settings/branding', label: 'Tampilan Aplikasi', icon: <IconPalette size={16} />, permission: 'manageBranding' },
+        ],
+      },
     ],
   },
   {
@@ -75,8 +88,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const role = user?.role.code;
+  const { appName } = useBranding();
 
   const isActive = (to: string) => (to === '/' ? location.pathname === '/' : location.pathname.startsWith(to));
+  // Sub menu links share a prefix (/settings, /settings/branding), so they match exactly.
+  const isExact = (to: string) => location.pathname === to;
+  const allowed = (item: NavItem) => !item.permission || hasPermission(role, item.permission);
 
   async function logout() {
     try {
@@ -93,9 +110,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <Group h="100%" px="md" justify="space-between">
           <Group gap="sm">
             <Burger opened={opened} onClick={toggle} hiddenFrom="md" size="sm" aria-label="Buka menu" />
-            <IconShieldCheck size={26} color="var(--mantine-color-blue-6)" aria-hidden />
-            <Text fw={700} size="lg">
-              Secure Patrol
+            <BrandLogo size={28} />
+            <Text fw={700} size="lg" truncate maw={320}>
+              {appName}
             </Text>
           </Group>
           {user && (
@@ -143,7 +160,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <AppShell.Navbar p="sm" component="nav" aria-label="Menu utama">
         <ScrollArea>
           {NAV_SECTIONS.map((section, index) => {
-            const items = section.items.filter((item) => !item.permission || hasPermission(role, item.permission));
+            const items = section.items
+              .map((item) => {
+                if (!item.children) return allowed(item) ? item : null;
+                const children = item.children.filter(allowed);
+                if (children.length === 0) return null;
+                if (children.length === 1) return { ...children[0]!, label: item.label, icon: item.icon };
+                return { ...item, children };
+              })
+              .filter((item): item is NavItem => item !== null);
             if (items.length === 0) return null;
             return (
               <div key={section.title ?? index}>
@@ -155,18 +180,44 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     </Text>
                   </>
                 )}
-                {items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    component={Link}
-                    to={item.to}
-                    label={item.label}
-                    leftSection={item.icon}
-                    active={isActive(item.to)}
-                    onClick={close}
-                    style={{ borderRadius: 6 }}
-                  />
-                ))}
+                {items.map((item) =>
+                  item.children ? (
+                    <NavLink
+                      key={item.label}
+                      // A real button, so the group opens with the keyboard (NavLink defaults to <a> without href).
+                      component="button"
+                      type="button"
+                      label={item.label}
+                      leftSection={item.icon}
+                      defaultOpened={isActive(item.to)}
+                      style={{ borderRadius: 6 }}
+                    >
+                      {item.children.map((child) => (
+                        <NavLink
+                          key={child.to}
+                          component={Link}
+                          to={child.to}
+                          label={child.label}
+                          leftSection={child.icon}
+                          active={isExact(child.to)}
+                          onClick={close}
+                          style={{ borderRadius: 6 }}
+                        />
+                      ))}
+                    </NavLink>
+                  ) : (
+                    <NavLink
+                      key={item.to}
+                      component={Link}
+                      to={item.to}
+                      label={item.label}
+                      leftSection={item.icon}
+                      active={isActive(item.to)}
+                      onClick={close}
+                      style={{ borderRadius: 6 }}
+                    />
+                  ),
+                )}
               </div>
             );
           })}

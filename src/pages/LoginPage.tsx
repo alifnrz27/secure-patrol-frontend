@@ -1,11 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Alert, Button, Center, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core';
-import { IconAlertTriangle, IconClock, IconShieldCheck } from '@tabler/icons-react';
+import { IconAlertTriangle, IconClock } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
+import { BrandLogo } from '@/components/BrandLogo';
 import { apiConfigProblem, isEnvConfigured } from '@/config/env';
+import { useBranding, useDocumentTitle } from '@/hooks/useBranding';
 import { useSession } from '@/hooks/useSession';
 import { describeError, isApiError } from '@/lib/api/errors';
 import { session } from '@/lib/auth/session';
@@ -25,6 +27,8 @@ function safeRedirect(value: string | null): string {
 
 export function LoginPage() {
   const { status, endReason } = useSession();
+  const { appName } = useBranding();
+  useDocumentTitle('Masuk');
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
@@ -55,8 +59,8 @@ export function LoginPage() {
         <form onSubmit={onSubmit} noValidate>
           <Stack>
             <Stack gap={4} align="center">
-              <IconShieldCheck size={40} color="var(--mantine-color-blue-6)" aria-hidden />
-              <Title order={2}>Secure Patrol</Title>
+              <BrandLogo size={56} />
+              <Title order={2} ta="center">{appName}</Title>
               <Text c="dimmed" size="sm">
                 Masuk ke panel admin
               </Text>

@@ -16,9 +16,28 @@ interface Props {
   required?: boolean;
   existingPath?: string | null;
   existingVersion?: string | null;
+  /** Current image as a plain URL (e.g. a data: URL) instead of a protected path. */
+  existingUrl?: string | null;
+  maxBytes?: number;
+  description?: string;
+  /** How the image fits the preview box (logos are shown whole). */
+  fit?: 'cover' | 'contain';
 }
 
-export function PhotoDropzone({ label, value, onChange, onValidation, error, required, existingPath, existingVersion }: Props) {
+export function PhotoDropzone({
+  label,
+  value,
+  onChange,
+  onValidation,
+  error,
+  required,
+  existingPath,
+  existingVersion,
+  existingUrl,
+  maxBytes = MAX_PHOTO_BYTES,
+  description = 'JPEG/PNG, maksimal 5 MB. Foto dipakai untuk validasi wajah.',
+  fit = 'cover',
+}: Props) {
   const [preview, setPreview] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,17 +51,19 @@ export function PhotoDropzone({ label, value, onChange, onValidation, error, req
   }, [value]);
 
   const accept = async (file: File) => {
-    const message = await validateImageFile(file);
+    const message = await validateImageFile(file, maxBytes);
     onValidation(message);
     onChange(message ? null : file);
   };
 
   return (
-    <Input.Wrapper label={label} withAsterisk={required} error={error} description="JPEG/PNG, maksimal 5 MB. Foto dipakai untuk validasi wajah.">
+    <Input.Wrapper label={label} withAsterisk={required} error={error} description={description}>
       <Group align="flex-start" mt={6} wrap="nowrap">
         <div style={{ width: 120, flexShrink: 0 }}>
           {preview ? (
-            <Image src={preview} alt="Pratinjau foto wajah" h={120} w={120} radius="md" fit="cover" />
+            <Image src={preview} alt={`Pratinjau ${label.toLowerCase()}`} h={120} w={120} radius="md" fit={fit} />
+          ) : existingUrl ? (
+            <Image src={existingUrl} alt={`${label} saat ini`} h={120} w={120} radius="md" fit={fit} bg="gray.0" />
           ) : existingPath ? (
             <SecureImage path={existingPath} version={existingVersion} alt="Foto wajah saat ini" h={120} w={120} radius="md" fit="cover" />
           ) : (
@@ -56,9 +77,9 @@ export function PhotoDropzone({ label, value, onChange, onValidation, error, req
             onDrop={(files) => files[0] && void accept(files[0])}
             onReject={(rejections) => {
               const code = rejections[0]?.errors[0]?.code;
-              onValidation(code === 'file-too-large' ? 'Ukuran file maksimal 5 MB.' : 'File harus berupa gambar JPEG atau PNG.');
+              onValidation(code === 'file-too-large' ? `Ukuran file maksimal ${Math.round(maxBytes / 1024 / 1024)} MB.` : 'File harus berupa gambar JPEG atau PNG.');
             }}
-            maxSize={MAX_PHOTO_BYTES}
+            maxSize={maxBytes}
             accept={[MIME_TYPES.jpeg, MIME_TYPES.png]}
             multiple={false}
             aria-label={label}
