@@ -13,6 +13,10 @@ const META: Record<string, { label: string; description: string }> = {
     label: 'Radius lokasi scan',
     description: 'Jarak maksimal HP ke titik patroli yang mewajibkan validasi lokasi. Juga ditampilkan sebagai lingkaran di peta.',
   },
+  patrol_point_assignment: {
+    label: 'Penugasan titik per petugas',
+    description: 'Jika aktif, petugas di aplikasi mobile hanya melihat titik yang ditugaskan kepadanya ditambah titik tanpa petugas. Penugasan diatur per shift yang sedang berjalan di Dashboard/Monitoring.',
+  },
   patrol_max_offline_hours: {
     label: 'Batas scan offline',
     description: 'Umur scan offline paling lama yang masih diterima saat HP tersambung kembali.',

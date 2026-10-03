@@ -163,6 +163,10 @@ src/
   Kepala/Admin Keamanan; pusat hanya melihat. Hapus hanya area kosong (jumlah titik menaut ke daftar titik area itu).
   Field Area di form titik; kolom dan filter Area di Titik Patroli, Titik per Shift, Riwayat Scan (dan CSV), export Excel,
   dan Rekap per titik. Checklist Monitoring/Dashboard dan Rekap per titik dikelompokkan per area dengan subtotal.
+- **Penugasan titik ke petugas** (shift berjalan): kolom "Ditugaskan" di checklist Dashboard/Monitoring dan Titik per
+  Shift; tombol **Tugaskan** (Kepala/Admin Keamanan, hanya group yang sedang berjalan) memilih beberapa Admin/Tim
+  Keamanan → `PUT /patrol-list-items/{id}/assignees`. Peringatan jika setting unit `patrol_point_assignment`
+  (Pengaturan Sistem → "Penugasan titik per petugas") masih OFF. Admin Keamanan tidak melihat role Kepala Keamanan.
 - **Ekspor Excel**: dialog berisi Unit (pusat), Shift, Titik, Petugas, tanggal (wajib, maksimal `export_max_range_days`
   hari) dan "Sertakan foto" (maksimal `export_photo_max_range_days` hari). untuk user pusat (awal dari pemilih unit); CSV ikut `unit_id` pemilih dan
   punya kolom Unit.

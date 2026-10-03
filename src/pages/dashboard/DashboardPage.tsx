@@ -203,7 +203,7 @@ function UnitDetail({ unitId }: { unitId: number | undefined }) {
             Detail group
           </Button>
         </Group>
-        <GroupItemsTable items={group.items} />
+        <GroupItemsTable items={group.items} running={group.status === 'ongoing'} />
       </Card>
     </>
   );

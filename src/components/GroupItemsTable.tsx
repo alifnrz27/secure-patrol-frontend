@@ -1,12 +1,36 @@
-import { Group, Progress, Table, Text } from '@mantine/core';
-import { Fragment } from 'react';
+import { Badge, Button, Group, Progress, Table, Text } from '@mantine/core';
+import { IconUserPlus } from '@tabler/icons-react';
+import { Fragment, useState } from 'react';
+import { usePermission } from '@/hooks/useSession';
 import { groupByArea } from '@/lib/areas';
 import type { GroupProgress, PatrolListItem } from '@/lib/api/types';
 import { formatDateTime, percent } from '@/lib/format';
+import { AssignDialog } from './AssignDialog';
 import { ConditionBadge } from './Badges';
 import { EmptyState } from './StateViews';
 
-function ItemRow({ item }: { item: PatrolListItem }) {
+function Assignees({ item, onAssign }: { item: PatrolListItem; onAssign?: (item: PatrolListItem) => void }) {
+  return (
+    <Group gap={4} wrap="wrap">
+      {item.assignees.length ? (
+        item.assignees.map((a) => (
+          <Badge key={a.id} size="sm" variant="light" color="grape" style={{ textTransform: 'none' }}>
+            {a.name}
+          </Badge>
+        ))
+      ) : (
+        <Text size="xs" c="dimmed">Semua petugas</Text>
+      )}
+      {onAssign && (
+        <Button size="compact-xs" variant="subtle" leftSection={<IconUserPlus size={12} />} onClick={() => onAssign(item)} aria-label={`Tugaskan petugas untuk ${item.name}`}>
+          Tugaskan
+        </Button>
+      )}
+    </Group>
+  );
+}
+
+function ItemRow({ item, onAssign }: { item: PatrolListItem; onAssign?: (item: PatrolListItem) => void }) {
   return (
     <Table.Tr className={item.last_condition === 'abnormal' ? 'row-danger' : undefined}>
       <Table.Td>
@@ -17,52 +41,64 @@ function ItemRow({ item }: { item: PatrolListItem }) {
       <Table.Td>{item.scan_count}</Table.Td>
       <Table.Td>{formatDateTime(item.last_scanned_at)}</Table.Td>
       <Table.Td>{item.last_scanned_by?.name ?? '-'}</Table.Td>
+      <Table.Td><Assignees item={item} onAssign={onAssign} /></Table.Td>
     </Table.Tr>
   );
 }
 
-/** Checklist of one group: last status per NFC point, grouped per area with a subtotal. */
-export function GroupItemsTable({ items }: { items: PatrolListItem[] }) {
+/**
+ * Checklist of one group: last status per NFC point, grouped per area with a
+ * subtotal. `running` (the group's shift is ongoing) lets Kepala/Admin
+ * Keamanan assign officers to points.
+ */
+export function GroupItemsTable({ items, running = false }: { items: PatrolListItem[]; running?: boolean }) {
+  const canAssign = usePermission('assignPoints') && running;
+  const [assigning, setAssigning] = useState<PatrolListItem | null>(null);
   if (items.length === 0) return <EmptyState title="Belum ada titik patroli di shift ini" />;
   const areas = groupByArea(items);
+  const onAssign = canAssign ? setAssigning : undefined;
   return (
-    <Table.ScrollContainer minWidth={640}>
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Titik</Table.Th>
-            <Table.Th>Status terakhir</Table.Th>
-            <Table.Th>Scan</Table.Th>
-            <Table.Th>Waktu</Table.Th>
-            <Table.Th>Petugas</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {areas
-            ? areas.map((area) => {
-                const scanned = area.items.filter((i) => i.is_scanned).length;
-                const scans = area.items.reduce((sum, i) => sum + i.scan_count, 0);
-                return (
-                  <Fragment key={area.key}>
-                    <Table.Tr className="area-row">
-                      <Table.Td colSpan={5}>
-                        <Group justify="space-between" gap="xs">
-                          <Text size="sm" fw={700}>{area.name}</Text>
-                          <Group gap="sm">
-                            <Text size="xs" c="dimmed">{scanned}/{area.items.length} titik di-scan · {scans} scan</Text>
-                            <Progress value={percent(scanned, area.items.length)} w={80} size="sm" color={scanned === area.items.length ? 'teal' : 'blue'} aria-hidden />
+    <>
+      <Table.ScrollContainer minWidth={820}>
+        <Table>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Titik</Table.Th>
+              <Table.Th>Status terakhir</Table.Th>
+              <Table.Th>Scan</Table.Th>
+              <Table.Th>Waktu</Table.Th>
+              <Table.Th>Petugas</Table.Th>
+              <Table.Th>Ditugaskan</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {areas
+              ? areas.map((area) => {
+                  const scanned = area.items.filter((i) => i.is_scanned).length;
+                  const scans = area.items.reduce((sum, i) => sum + i.scan_count, 0);
+                  return (
+                    <Fragment key={area.key}>
+                      <Table.Tr className="area-row">
+                        <Table.Td colSpan={6}>
+                          <Group justify="space-between" gap="xs">
+                            <Text size="sm" fw={700}>{area.name}</Text>
+                            <Group gap="sm">
+                              <Text size="xs" c="dimmed">{scanned}/{area.items.length} titik di-scan · {scans} scan</Text>
+                              <Progress value={percent(scanned, area.items.length)} w={80} size="sm" color={scanned === area.items.length ? 'teal' : 'blue'} aria-hidden />
+                            </Group>
                           </Group>
-                        </Group>
-                      </Table.Td>
-                    </Table.Tr>
-                    {area.items.map((item) => <ItemRow key={item.id} item={item} />)}
-                  </Fragment>
-                );
-              })
-            : items.map((item) => <ItemRow key={item.id} item={item} />)}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
+                        </Table.Td>
+                      </Table.Tr>
+                      {area.items.map((item) => <ItemRow key={item.id} item={item} onAssign={onAssign} />)}
+                    </Fragment>
+                  );
+                })
+              : items.map((item) => <ItemRow key={item.id} item={item} onAssign={onAssign} />)}
+          </Table.Tbody>
+        </Table>
+      </Table.ScrollContainer>
+      <AssignDialog item={assigning} onClose={() => setAssigning(null)} />
+    </>
   );
 }
 

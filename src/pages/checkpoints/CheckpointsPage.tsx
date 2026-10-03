@@ -91,6 +91,7 @@ export default function CheckpointsPage() {
                   <Table.Th>Scan</Table.Th>
                   <Table.Th>Terakhir di-scan</Table.Th>
                   <Table.Th>Petugas</Table.Th>
+                  <Table.Th>Ditugaskan</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -129,6 +130,11 @@ export default function CheckpointsPage() {
                       <Table.Td>{item.scan_count}</Table.Td>
                       <Table.Td>{formatDateTime(item.last_scanned_at)}</Table.Td>
                       <Table.Td>{item.last_scanned_by?.name ?? '-'}</Table.Td>
+                      <Table.Td>
+                        <Text size="xs" c={item.assignees.length ? undefined : 'dimmed'}>
+                          {item.assignees.length ? item.assignees.map((a) => a.name).join(', ') : 'Semua petugas'}
+                        </Text>
+                      </Table.Td>
                     </Table.Tr>
                   );
                 })}

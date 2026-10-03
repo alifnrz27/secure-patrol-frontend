@@ -6,6 +6,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { usersApi } from '@/api/users';
 import { PhotoDropzone } from '@/components/PhotoDropzone';
+import { useSession } from '@/hooks/useSession';
 import { useUnits } from '@/hooks/useUnitScope';
 import type { Role, User } from '@/lib/api/types';
 import { applyServerErrors } from '@/lib/formErrors';
@@ -61,6 +62,7 @@ export function UserForm({ user, roles, currentUserId, canManageHeadOffice, defa
   const queryClient = useQueryClient();
   const isSelf = user?.id === currentUserId;
   const units = useUnits();
+  const { user: me } = useSession();
   const { register, control, handleSubmit, setError, clearErrors, watch, formState } = useForm<FormValues>({
     resolver: zodResolver((user ? updateSchema : createSchema) as typeof createSchema),
     defaultValues: {
@@ -111,8 +113,11 @@ export function UserForm({ user, roles, currentUserId, canManageHeadOffice, defa
 
   // Head office roles (Super-Admin, Manager Keamanan) are assigned only by the
   // Super-Admin. Inactive roles are rejected, except the one the user already has.
+  // Admin Keamanan may not see or assign the Kepala Keamanan role (the server answers 403).
+  const hidesHeadRole = me?.role.code === 'security_admin';
   const roleOptions = roles
     .filter((r) => (canManageHeadOffice || !isHeadOfficeRole(r.code)) && (r.is_active || r.id === user?.role.id))
+    .filter((r) => !hidesHeadRole || r.code !== 'security_head')
     .map((r) => ({ value: String(r.id), label: r.is_active ? r.name : `${r.name} (nonaktif)` }));
 
   const roleChanged = user && watch('role_id') !== String(user.role.id);

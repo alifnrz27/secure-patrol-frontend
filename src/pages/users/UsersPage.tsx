@@ -63,7 +63,10 @@ export default function UsersPage() {
 
   // Only head office managers (Super-Admin, Manager) manage head office users; unit managers only see their unit.
   const canTouch = (user: User) => canManage && (canManageHeadOffice || !isHeadOfficeRole(user.role.code));
-  const roleOptions = (roles.data?.items ?? []).map((r) => ({ value: String(r.id), label: r.name }));
+  // Admin Keamanan never receives Kepala Keamanan users, so that filter option is hidden too.
+  const roleOptions = (roles.data?.items ?? [])
+    .filter((r) => me?.role.code !== 'security_admin' || r.code !== 'security_head')
+    .map((r) => ({ value: String(r.id), label: r.name }));
 
   return (
     <>

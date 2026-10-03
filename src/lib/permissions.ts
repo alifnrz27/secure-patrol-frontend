@@ -37,6 +37,8 @@ export const PERMISSIONS = {
   managePatrolPoints: UNIT_MANAGERS,
   viewShifts: WEB_USERS,
   manageShifts: UNIT_MANAGERS,
+  /** Assign officers to points of the running shift. */
+  assignPoints: UNIT_MANAGERS,
   viewUsers: WEB_USERS,
   // The Manager manages users like the Super-Admin (head office users, any unit).
   manageUsers: [...HEAD_OFFICE_ROLES, ...UNIT_MANAGERS],

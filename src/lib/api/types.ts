@@ -214,6 +214,8 @@ export interface PatrolUserSummary {
 
 export interface PatrolListItem {
   id: number;
+  /** Officers assigned to this point for this shift; empty = every officer of the unit. */
+  assignees: PatrolUserSummary[];
   area_id: number | null;
   /** Area name while the shift ran ("" = no area) */
   area_name: string;

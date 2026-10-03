@@ -119,6 +119,9 @@ const SERVER_MESSAGES_ID: Record<string, string> = {
     'Unit masih memiliki pengguna atau titik patroli. Pindahkan atau hapus datanya dulu, atau nonaktifkan unit ini.',
   'unit_id is required for this role': 'Unit wajib dipilih untuk role ini.',
   'unit not found': 'Unit tidak ditemukan.',
+  'officers can only be assigned to points of the running shift': 'Petugas hanya bisa ditugaskan ke titik pada shift yang sedang berjalan.',
+  'assignees must be active security admins or security team members of the unit':
+    'Petugas yang ditugaskan harus Admin Keamanan atau Tim Keamanan aktif di unit ini.',
   'an area with this name already exists in the unit': 'Nama area sudah dipakai di unit ini.',
   'area still has patrol points, move them to another area first': 'Area masih berisi titik patroli. Pindahkan titiknya ke area lain dulu.',
   'area not found in this unit': 'Area tidak ditemukan di unit ini.',

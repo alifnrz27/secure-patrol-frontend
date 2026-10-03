@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { hasPermission, isHeadOfficeRole, type Permission } from './permissions';
 
 const ALL: Permission[] = [
-  'viewPatrol', 'viewUnits', 'manageUnits', 'viewAreas', 'manageAreas', 'viewPatrolPoints', 'managePatrolPoints', 'viewShifts', 'manageShifts',
+  'viewPatrol', 'viewUnits', 'manageUnits', 'viewAreas', 'manageAreas', 'viewPatrolPoints', 'managePatrolPoints', 'viewShifts', 'manageShifts', 'assignPoints',
   'viewUsers', 'manageUsers', 'manageHeadOfficeUsers', 'viewRoles', 'manageRoles', 'manageAppClients', 'viewAuditLogs',
   'viewSettings', 'editSettings', 'viewHelpDeskDrafts', 'manageHelpDesk', 'filterScansByOfficer', 'manageBranding', 'manageLicense',
 ];
@@ -10,7 +10,7 @@ const granted = (role: string) => ALL.filter((p) => hasPermission(role, p));
 
 describe('multi-unit access', () => {
   it('super_admin manages the head office data but not patrol points and shifts', () => {
-    expect(granted('super_admin')).toEqual(ALL.filter((p) => p !== 'manageAreas' && p !== 'managePatrolPoints' && p !== 'manageShifts'));
+    expect(granted('super_admin')).toEqual(ALL.filter((p) => !['manageAreas', 'managePatrolPoints', 'manageShifts', 'assignPoints'].includes(p)));
   });
 
   it('security_manager views units and manages users like the Super-Admin, without roles, app clients and audit log', () => {
@@ -22,7 +22,7 @@ describe('multi-unit access', () => {
 
   it.each(['security_head', 'security_admin'])('%s manages its own unit', (role) => {
     expect(granted(role)).toEqual([
-      'viewPatrol', 'viewAreas', 'manageAreas', 'viewPatrolPoints', 'managePatrolPoints', 'viewShifts', 'manageShifts', 'viewUsers', 'manageUsers',
+      'viewPatrol', 'viewAreas', 'manageAreas', 'viewPatrolPoints', 'managePatrolPoints', 'viewShifts', 'manageShifts', 'assignPoints', 'viewUsers', 'manageUsers',
       'viewSettings', 'editSettings', 'filterScansByOfficer',
     ]);
   });

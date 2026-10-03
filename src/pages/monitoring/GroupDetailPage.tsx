@@ -114,7 +114,7 @@ export default function GroupDetailPage() {
                 <Tabs.Tab value="summary">Rekap per titik</Tabs.Tab>
               </Tabs.List>
               <Tabs.Panel value="checklist">
-                <GroupItemsTable items={query.data.items} />
+                <GroupItemsTable items={query.data.items} running={query.data.status === 'ongoing'} />
               </Tabs.Panel>
               <Tabs.Panel value="map">
                 <Suspense fallback={<Skeleton h={380} />}>

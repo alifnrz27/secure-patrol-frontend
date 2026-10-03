@@ -187,9 +187,6 @@ export function PointSummaryView({ summary, fileName }: { summary: PointSummary;
 
       <Card withBorder radius="md">
         <Title order={5}>Total scan per titik</Title>
-        <Text size="xs" c="dimmed" mb="sm">
-          Setiap titik ditampilkan seperti baterai berskala 0–{BAR_SCALE_MAX}: {BAR_SCALE_MAX} scan atau lebih = penuh; angka di kanan adalah jumlah sebenarnya.
-        </Text>
         {areaRows ? (
           <Stack gap="lg">
             {areaRows.map((area, index) => (

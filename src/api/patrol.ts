@@ -45,6 +45,8 @@ export type PointSummaryParams = ({ group_id: number } | { shift_id: number; dat
 // The Go backend encodes an empty list as null (e.g. an area without points),
 // so lists inside these responses are normalized to arrays here.
 const withItems = <T extends { items: unknown[] | null }>(data: T): T => ({ ...data, items: data.items ?? [] });
+const withAssignees = (item: PatrolListItem): PatrolListItem => ({ ...item, assignees: item.assignees ?? [] });
+const withGroupItems = (group: PatrolGroupDetail): PatrolGroupDetail => ({ ...group, items: (group.items ?? []).map(withAssignees) });
 const withPhotos = (scan: PatrolScan): PatrolScan => ({ ...scan, photos: scan.photos ?? [] });
 
 export const patrolApi = {
@@ -55,12 +57,18 @@ export const patrolApi = {
     apiFetchBlob('/patrol-scans/export', { query: { ...params }, signal }),
   /** Head office users must pass unitId (422 "unit_id is required" otherwise). */
   currentGroup: (unitId?: number) =>
-    apiFetch<PatrolGroupDetail>('/patrol-groups/current', { query: { unit_id: unitId } }).then(withItems),
+    apiFetch<PatrolGroupDetail>('/patrol-groups/current', { query: { unit_id: unitId } }).then(withGroupItems),
   groups: (params: GroupListParams, signal?: AbortSignal) =>
     apiFetch<Paginated<PatrolGroup>>('/patrol-groups', { query: { ...params }, signal }),
-  group: (id: number) => apiFetch<PatrolGroupDetail>(`/patrol-groups/${id}`).then(withItems),
+  group: (id: number) => apiFetch<PatrolGroupDetail>(`/patrol-groups/${id}`).then(withGroupItems),
+  /** Running shift only; replaces the list, [] removes every assignee. */
+  setAssignees: (itemId: number, userIds: number[]) =>
+    apiFetch<PatrolListItem>(`/patrol-list-items/${itemId}/assignees`, { method: 'PUT', json: { user_ids: userIds } }).then(withAssignees),
   listItems: (params: ListItemParams) =>
-    apiFetch<Paginated<PatrolListItem>>('/patrol-list-items', { query: { ...params } }),
+    apiFetch<Paginated<PatrolListItem>>('/patrol-list-items', { query: { ...params } }).then((page) => ({
+      ...page,
+      items: (page.items ?? []).map(withAssignees),
+    })),
   scans: (params: ScanListParams, signal?: AbortSignal) =>
     apiFetch<Paginated<PatrolScan>>('/patrol-scans', { query: { ...params }, signal }).then((page) => ({
       ...page,
