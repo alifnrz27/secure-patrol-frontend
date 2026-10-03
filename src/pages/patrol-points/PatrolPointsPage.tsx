@@ -4,18 +4,19 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useState } from 'react';
 import { patrolPointsApi } from '@/api/patrolPoints';
 import { confirmDelete } from '@/components/confirm';
+import { AreaSelect } from '@/components/Filters';
 import { PageHeader } from '@/components/PageHeader';
 import { PaginationBar } from '@/components/PaginationBar';
 import { SearchInput } from '@/components/SearchInput';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/StateViews';
 import { usePermission } from '@/hooks/useSession';
 import { useUnitScope } from '@/hooks/useUnitScope';
-import { toPage, useUrlFilters } from '@/hooks/useUrlFilters';
+import { toNumber, toPage, useUrlFilters } from '@/hooks/useUrlFilters';
 import type { PatrolPoint } from '@/lib/api/types';
 import { notifyError, notifySuccess } from '@/lib/notify';
 import { PatrolPointFormModal } from './PatrolPointForm';
 
-const KEYS = ['search', 'page', 'limit'] as const;
+const KEYS = ['search', 'area_id', 'page', 'limit'] as const;
 
 export default function PatrolPointsPage() {
   const canManage = usePermission('managePatrolPoints');
@@ -25,7 +26,7 @@ export default function PatrolPointsPage() {
   const [formOpen, setFormOpen] = useState(false);
 
   const { unitId, showUnitColumn, unitName } = useUnitScope();
-  const params = { unit_id: unitId, search: filters.search, page: toPage(filters.page), limit: Number(filters.limit) || 10 };
+  const params = { unit_id: unitId, area_id: toNumber(filters.area_id), search: filters.search, page: toPage(filters.page), limit: Number(filters.limit) || 10 };
   const query = useQuery({
     queryKey: ['patrol-points', 'list', params],
     queryFn: () => patrolPointsApi.list(params),
@@ -62,6 +63,7 @@ export default function PatrolPointsPage() {
       <Card withBorder radius="md">
         <Group mb="md">
           <SearchInput value={filters.search} onChange={(search) => setFilters({ search })} placeholder="Cari nama, lokasi, atau kode NFC" w={340} />
+          <AreaSelect value={filters.area_id} onChange={(area_id) => setFilters({ area_id })} />
         </Group>
         {query.isPending ? (
           <TableSkeleton cols={6} />
@@ -79,6 +81,7 @@ export default function PatrolPointsPage() {
                 <Table.Tr>
                   {showUnitColumn && <Table.Th>Unit</Table.Th>}
                   <Table.Th>Nama</Table.Th>
+                  <Table.Th>Area</Table.Th>
                   <Table.Th>Lokasi</Table.Th>
                   <Table.Th>Kode NFC</Table.Th>
                   <Table.Th>Koordinat</Table.Th>
@@ -91,6 +94,7 @@ export default function PatrolPointsPage() {
                   <Table.Tr key={point.id}>
                     {showUnitColumn && <Table.Td>{unitName(point.unit_id)}</Table.Td>}
                     <Table.Td fw={600}>{point.name}</Table.Td>
+                    <Table.Td>{point.area?.name ?? <Text span size="sm" c="dimmed">-</Text>}</Table.Td>
                     <Table.Td>{point.location}</Table.Td>
                     <Table.Td>
                       <Text ff="monospace" size="sm">{point.nfc_code}</Text>

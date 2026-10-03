@@ -4,6 +4,7 @@ import { lazy, Suspense, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { patrolApi } from '@/api/patrol';
 import { GroupStatusBadge } from '@/components/Badges';
+import { AreaSelect } from '@/components/Filters';
 import { GroupItemsTable, ProgressCell } from '@/components/GroupItemsTable';
 import { PageHeader } from '@/components/PageHeader';
 import { PaginationBar } from '@/components/PaginationBar';
@@ -15,11 +16,27 @@ import { formatDate, formatDateTime } from '@/lib/format';
 
 const PointsStatusMap = lazy(() => import('@/components/maps/PointsStatusMap').then((m) => ({ default: m.PointsStatusMap })));
 
-function GroupPointSummary({ groupId }: { groupId: number }) {
-  const query = useQuery({ queryKey: ['patrol-point-summary', { group_id: groupId }], queryFn: () => patrolApi.pointSummary({ group_id: groupId }) });
-  if (query.isPending) return <TableSkeleton cols={6} />;
-  if (query.isError) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
-  return <PointSummaryView summary={query.data} fileName={`rekap-titik-group-${groupId}.csv`} />;
+function GroupPointSummary({ groupId, unitId }: { groupId: number; unitId: number }) {
+  const [areaId, setAreaId] = useState('');
+  const area_id = areaId ? Number(areaId) : undefined;
+  const query = useQuery({
+    queryKey: ['patrol-point-summary', { group_id: groupId, area_id }],
+    queryFn: () => patrolApi.pointSummary({ group_id: groupId, area_id }),
+  });
+  return (
+    <Stack>
+      <Group>
+        <AreaSelect value={areaId} onChange={(v) => setAreaId(v ?? '')} scopeUnitId={unitId} />
+      </Group>
+      {query.isPending ? (
+        <TableSkeleton cols={6} />
+      ) : query.isError ? (
+        <ErrorState error={query.error} onRetry={() => void query.refetch()} />
+      ) : (
+        <PointSummaryView summary={query.data} fileName={`rekap-titik-group-${groupId}.csv`} />
+      )}
+    </Stack>
+  );
 }
 
 function GroupScans({ groupId, onOpen }: { groupId: number; onOpen: (id: number) => void }) {
@@ -108,7 +125,7 @@ export default function GroupDetailPage() {
                 <GroupScans groupId={id} onOpen={setScanId} />
               </Tabs.Panel>
               <Tabs.Panel value="summary">
-                <GroupPointSummary groupId={id} />
+                <GroupPointSummary groupId={id} unitId={query.data.unit.id} />
               </Tabs.Panel>
             </Tabs>
           </Card>

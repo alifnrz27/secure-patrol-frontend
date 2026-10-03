@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Alert, Button, Grid, Group, Modal, NumberInput, Skeleton, Stack, Switch, Text, TextInput } from '@mantine/core';
+import { Alert, Button, Grid, Group, Modal, NumberInput, Select, Skeleton, Stack, Switch, Text, TextInput } from '@mantine/core';
 import { IconCurrentLocation } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { lazy, Suspense, useState } from 'react';
@@ -7,6 +7,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { patrolPointsApi, type PatrolPointBody } from '@/api/patrolPoints';
 import { useAppConfig } from '@/hooks/useSession';
+import { useAreas } from '@/components/Filters';
 import { useUnitScope } from '@/hooks/useUnitScope';
 import type { PatrolPoint } from '@/lib/api/types';
 import { applyServerErrors } from '@/lib/formErrors';
@@ -33,11 +34,13 @@ const schema = z.object({
   longitude: coordinate(-180, 180, 'Longitude'),
   is_location_match_required: z.boolean(),
   is_face_validation_required: z.boolean(),
+  // '' = no area
+  area_id: z.string().transform((v) => (v ? Number(v) : null)),
 });
 
 type FormInput = z.input<typeof schema>;
 type FormOutput = z.output<typeof schema>;
-const FIELDS = ['name', 'location', 'nfc_code', 'latitude', 'longitude', 'is_location_match_required', 'is_face_validation_required'] as const;
+const FIELDS = ['name', 'location', 'nfc_code', 'latitude', 'longitude', 'is_location_match_required', 'is_face_validation_required', 'area_id'] as const;
 
 interface Props {
   opened: boolean;
@@ -57,12 +60,13 @@ function PatrolPointForm({ point, onDone }: { point: PatrolPoint | null; onDone:
   const config = useAppConfig();
   // New points start on the user's unit; NFC codes stay unique across every unit.
   const { defaultCenter } = useUnitScope();
+  const areas = useAreas();
   const queryClient = useQueryClient();
   const [locating, setLocating] = useState(false);
   const { register, control, handleSubmit, setError, setValue, watch, formState } = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(schema),
     defaultValues: point
-      ? { ...point }
+      ? { ...point, area_id: point.area_id ? String(point.area_id) : '' }
       : {
           name: '',
           location: '',
@@ -71,6 +75,7 @@ function PatrolPointForm({ point, onDone }: { point: PatrolPoint | null; onDone:
           longitude: undefined as unknown as number,
           is_location_match_required: false,
           is_face_validation_required: false,
+          area_id: '',
         },
   });
 
@@ -82,7 +87,7 @@ function PatrolPointForm({ point, onDone }: { point: PatrolPoint | null; onDone:
       onDone();
     },
     onError: (error) => {
-      const rest = applyServerErrors(error, setError, FIELDS, { 'nfc code': 'nfc_code' });
+      const rest = applyServerErrors(error, setError, FIELDS, { 'nfc code': 'nfc_code', area: 'area_id' });
       if (rest.length) notifyError(error, rest);
     },
   });
@@ -118,6 +123,23 @@ function PatrolPointForm({ point, onDone }: { point: PatrolPoint | null; onDone:
         <Grid.Col span={{ base: 12, md: 5 }}>
           <Stack>
             <TextInput label="Nama titik" withAsterisk {...register('name')} error={formState.errors.name?.message} />
+            <Controller
+              control={control}
+              name="area_id"
+              render={({ field, fieldState }) => (
+                <Select
+                  label="Area"
+                  description={areas.data?.length ? 'Opsional: kelompok titik, mis. gedung atau lantai.' : 'Belum ada area. Buat di menu Area.'}
+                  placeholder="Tanpa area"
+                  data={(areas.data ?? []).map((a) => ({ value: String(a.id), label: a.name }))}
+                  value={field.value || null}
+                  onChange={(v) => field.onChange(v ?? '')}
+                  clearable
+                  searchable
+                  error={fieldState.error?.message}
+                />
+              )}
+            />
             <TextInput
               label="Lokasi"
               description="Deskripsi lokasi, mis. Gedung A Lantai 2"

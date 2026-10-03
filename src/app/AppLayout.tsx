@@ -19,6 +19,7 @@ import {
   IconMapPin,
   IconPalette,
   IconSettings,
+  IconStack2,
   IconUser,
   IconUserShield,
   IconUsers,
@@ -60,6 +61,7 @@ const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
     title: 'Master Data',
     items: [
       { to: '/units', label: 'Unit', icon: <IconBuilding size={18} />, permission: 'viewUnits' },
+      { to: '/areas', label: 'Area', icon: <IconStack2 size={18} />, permission: 'viewAreas' },
       { to: '/patrol-points', label: 'Titik Patroli', icon: <IconMapPin size={18} />, permission: 'viewPatrolPoints' },
       { to: '/shifts', label: 'Pengaturan Shift', icon: <IconCalendarTime size={18} />, permission: 'viewShifts' },
       { to: '/users', label: 'Pengguna', icon: <IconUsers size={18} />, permission: 'viewUsers' },

@@ -3,7 +3,7 @@ import { IconAlertTriangle } from '@tabler/icons-react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { patrolApi } from '@/api/patrol';
 import { ConditionBadge } from '@/components/Badges';
-import { DateRangeFilter, ShiftSelect } from '@/components/Filters';
+import { AreaSelect, DateRangeFilter, ShiftSelect } from '@/components/Filters';
 import { PageHeader } from '@/components/PageHeader';
 import { PaginationBar } from '@/components/PaginationBar';
 import { SearchInput } from '@/components/SearchInput';
@@ -14,7 +14,7 @@ import { serverNow } from '@/lib/api/clock';
 import type { PatrolListItem } from '@/lib/api/types';
 import { formatDate, formatDateTime, formatTime } from '@/lib/format';
 
-const KEYS = ['group_id', 'shift_id', 'date_from', 'date_to', 'status', 'search', 'page', 'limit'] as const;
+const KEYS = ['group_id', 'shift_id', 'area_id', 'date_from', 'date_to', 'status', 'search', 'page', 'limit'] as const;
 
 /** Unscanned point of a group whose shift already ended. */
 function isMissed(item: PatrolListItem): boolean {
@@ -26,6 +26,7 @@ export default function CheckpointsPage() {
   const { unitId, showUnitColumn } = useUnitScope();
   const params = {
     unit_id: unitId,
+    area_id: toNumber(filters.area_id),
     group_id: toNumber(filters.group_id),
     shift_id: toNumber(filters.shift_id),
     date_from: filters.date_from,
@@ -52,6 +53,7 @@ export default function CheckpointsPage() {
             </Badge>
           )}
           <ShiftSelect value={filters.shift_id} onChange={(shift_id) => setFilters({ shift_id })} />
+          <AreaSelect value={filters.area_id} onChange={(area_id) => setFilters({ area_id })} />
           <DateRangeFilter from={filters.date_from} to={filters.date_to} onChange={(date_from, date_to) => setFilters({ date_from, date_to })} />
           <SegmentedControl
             aria-label="Filter status scan"
@@ -83,6 +85,7 @@ export default function CheckpointsPage() {
                 <Table.Tr>
                   {showUnitColumn && <Table.Th>Unit</Table.Th>}
                   <Table.Th>Shift</Table.Th>
+                  <Table.Th>Area</Table.Th>
                   <Table.Th>Titik</Table.Th>
                   <Table.Th>Status</Table.Th>
                   <Table.Th>Scan</Table.Th>
@@ -108,6 +111,7 @@ export default function CheckpointsPage() {
                           '-'
                         )}
                       </Table.Td>
+                      <Table.Td>{item.area_name || <Text span size="sm" c="dimmed">-</Text>}</Table.Td>
                       <Table.Td>
                         <Text size="sm" fw={600}>{item.name}</Text>
                         <Text size="xs" c="dimmed">{item.location} · <span style={{ fontFamily: 'monospace' }}>{item.nfc_code}</span></Text>

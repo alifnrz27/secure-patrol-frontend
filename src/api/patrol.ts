@@ -19,12 +19,14 @@ export interface GroupListParams {
 }
 
 export interface ListItemParams extends GroupListParams {
+  area_id?: number;
   search?: string;
   group_id?: number;
   status?: 'scanned' | 'unscanned';
 }
 
 export interface ScanListParams extends GroupListParams {
+  area_id?: number;
   group_id?: number;
   scanned_by?: number;
   patrol_point_id?: number;
@@ -32,13 +34,13 @@ export interface ScanListParams extends GroupListParams {
 }
 
 /** Filters the server-side Excel export understands (no condition or group). */
-export type ScanExportParams = Pick<ScanListParams, 'unit_id' | 'shift_id' | 'patrol_point_id' | 'scanned_by' | 'date_from' | 'date_to'> & {
+export type ScanExportParams = Pick<ScanListParams, 'unit_id' | 'area_id' | 'shift_id' | 'patrol_point_id' | 'scanned_by' | 'date_from' | 'date_to'> & {
   /** Thumbnails in Foto 1–3 (shorter range and row limit). */
   include_photos?: boolean;
 };
 
 /** One group, or one shift over a date range (the unit follows the shift). */
-export type PointSummaryParams = { group_id: number } | { shift_id: number; date_from?: string; date_to?: string };
+export type PointSummaryParams = ({ group_id: number } | { shift_id: number; date_from?: string; date_to?: string }) & { area_id?: number };
 
 export const patrolApi = {
   pointSummary: (params: PointSummaryParams) => apiFetch<PointSummary>('/patrol-point-summary', { query: { ...params } }),

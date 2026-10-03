@@ -3,7 +3,7 @@ import { IconChevronDown, IconDownload, IconFileSpreadsheet, IconFileText } from
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { patrolApi, type ScanListParams } from '@/api/patrol';
-import { DateRangeFilter, OfficerSelect, PatrolPointSelect, ShiftSelect } from '@/components/Filters';
+import { AreaSelect, DateRangeFilter, OfficerSelect, PatrolPointSelect, ShiftSelect } from '@/components/Filters';
 import { useExport } from '@/components/ExportProgress';
 import { PageHeader } from '@/components/PageHeader';
 import { PaginationBar } from '@/components/PaginationBar';
@@ -19,11 +19,11 @@ import { formatDate, formatDateTime, isSentOffline, todayDate } from '@/lib/form
 import { fetchAllPages, MAX_PAGE_SIZE } from '@/lib/pagination';
 import { ExportExcelDialog } from './ExportExcelDialog';
 
-const KEYS = ['group_id', 'shift_id', 'date_from', 'date_to', 'scanned_by', 'patrol_point_id', 'condition', 'page', 'limit'] as const;
+const KEYS = ['group_id', 'shift_id', 'area_id', 'date_from', 'date_to', 'scanned_by', 'patrol_point_id', 'condition', 'page', 'limit'] as const;
 
 function scansToCsv(scans: PatrolScan[]): string {
   return toCsv(
-    ['ID', 'Waktu scan', 'Diterima server', 'Dikirim offline', 'Tanggal shift', 'Unit', 'Shift', 'Titik', 'Lokasi', 'Kode NFC', 'Kondisi', 'Catatan', 'Petugas', 'Email petugas', 'Latitude', 'Longitude', 'Jarak (m)', 'Lokasi valid', 'Wajah terverifikasi', 'Skor wajah', 'Jumlah foto'],
+    ['ID', 'Waktu scan', 'Diterima server', 'Dikirim offline', 'Tanggal shift', 'Unit', 'Shift', 'Area', 'Titik', 'Lokasi', 'Kode NFC', 'Kondisi', 'Catatan', 'Petugas', 'Email petugas', 'Latitude', 'Longitude', 'Jarak (m)', 'Lokasi valid', 'Wajah terverifikasi', 'Skor wajah', 'Jumlah foto'],
     scans.map((s) => [
       s.id,
       formatDateTime(s.scanned_at),
@@ -32,6 +32,7 @@ function scansToCsv(scans: PatrolScan[]): string {
       formatDate(s.group.shift_date),
       s.group.unit_name,
       s.group.shift_name,
+      s.patrol_point.area_name,
       s.patrol_point.name,
       s.patrol_point.location,
       s.patrol_point.nfc_code,
@@ -59,6 +60,7 @@ export default function ScansPage() {
 
   const filterParams: ScanListParams = {
     unit_id: unitId,
+    area_id: toNumber(filters.area_id),
     group_id: toNumber(filters.group_id),
     shift_id: toNumber(filters.shift_id),
     date_from: filters.date_from,
@@ -76,6 +78,7 @@ export default function ScansPage() {
   const excelInitial = useMemo(
     () => ({
       shift_id: filters.shift_id,
+      area_id: filters.area_id,
       patrol_point_id: filters.patrol_point_id,
       scanned_by: canFilterOfficer ? filters.scanned_by : '',
       date_from: filters.date_from,
@@ -133,6 +136,7 @@ export default function ScansPage() {
           )}
           <ShiftSelect value={filters.shift_id} onChange={(shift_id) => setFilters({ shift_id })} />
           <DateRangeFilter from={filters.date_from} to={filters.date_to} onChange={(date_from, date_to) => setFilters({ date_from, date_to })} />
+          <AreaSelect value={filters.area_id} onChange={(area_id) => setFilters({ area_id })} />
           <PatrolPointSelect value={filters.patrol_point_id} onChange={(patrol_point_id) => setFilters({ patrol_point_id })} />
           {canFilterOfficer && <OfficerSelect value={filters.scanned_by} onChange={(scanned_by) => setFilters({ scanned_by })} />}
           <SegmentedControl

@@ -2,6 +2,8 @@ import { Badge, Button, Card, Group, SimpleGrid, Stack, Table, Text, Title } fro
 import { IconDownload } from '@tabler/icons-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { PointSummary, PointSummaryItem } from '@/lib/api/types';
+import { Fragment } from 'react';
+import { groupByArea } from '@/lib/areas';
 import { downloadCsv } from '@/lib/csv';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { BAR_SCALE_MAX, barValue, pointStatus, pointSummaryCsv } from './pointSummary';
@@ -64,7 +66,6 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: { paylo
       <Text size="xs" c="dimmed">{row.location}</Text>
       <Text size="sm" mt={4}>Total scan: {row.total_scans} ({row.normal_scans} normal, {row.abnormal_scans} tidak normal)</Text>
       <Text size="sm">Petugas: {row.officers}</Text>
-      <Text size="sm">Shift ter-scan: {row.scanned_groups}/{row.groups}</Text>
     </Card>
   );
 }
@@ -74,6 +75,60 @@ function StatusBadge({ item }: { item: PointSummaryItem }) {
   if (status === 'unscanned') return <Badge color="red" variant="light">Belum di-scan</Badge>;
   if (status === 'partial') return <Badge color="orange" variant="light">Terlewat {item.groups - item.scanned_groups} shift</Badge>;
   return <Badge color="green" variant="light">Lengkap</Badge>;
+}
+
+function SummaryRow({ item }: { item: PointSummaryItem }) {
+  const status = pointStatus(item);
+  return (
+    <Table.Tr className={status === 'unscanned' ? 'row-danger' : status === 'partial' ? 'row-warning' : undefined}>
+      <Table.Td>
+        <Text size="sm" fw={600}>{item.name}</Text>
+        <Text size="xs" c="dimmed">{item.location}</Text>
+      </Table.Td>
+      <Table.Td><StatusBadge item={item} /></Table.Td>
+      <Table.Td fw={600}>{item.total_scans}</Table.Td>
+      <Table.Td>
+        {item.normal_scans} / <Text span size="sm" c={item.abnormal_scans ? 'red' : undefined} fw={item.abnormal_scans ? 600 : undefined}>{item.abnormal_scans}</Text>
+      </Table.Td>
+      <Table.Td>{item.officers}</Table.Td>
+      <Table.Td>{formatDateTime(item.first_scanned_at)}</Table.Td>
+      <Table.Td>{formatDateTime(item.last_scanned_at)}</Table.Td>
+    </Table.Tr>
+  );
+}
+
+/** Area name with its subtotal: points scanned, scans and abnormal scans. */
+function AreaHeading({ name, items }: { name: string; items: PointSummaryItem[] }) {
+  const scanned = items.filter((i) => i.total_scans > 0).length;
+  const scans = items.reduce((sum, i) => sum + i.total_scans, 0);
+  const abnormal = items.reduce((sum, i) => sum + i.abnormal_scans, 0);
+  return (
+    <Group justify="space-between" gap="xs" mb={4}>
+      <Text size="sm" fw={700}>{name}</Text>
+      <Text size="xs" c="dimmed">
+        {scanned}/{items.length} titik di-scan · {scans} scan
+        {abnormal > 0 && <Text span size="xs" c="red" fw={600}> · {abnormal} tidak normal</Text>}
+      </Text>
+    </Group>
+  );
+}
+
+/** `showAxis` = false hides the 0–10 scale, so stacked per-area charts show it only once (under the last). */
+function BatteryChart({ rows, showAxis = true }: { rows: Row[]; showAxis?: boolean }) {
+  return (
+    <div style={{ height: rows.length * 40 + (showAxis ? 40 : 12) }} role="img" aria-label={`Grafik total scan per titik. ${rows.map((r) => `${r.name}: ${r.total_scans}`).join(', ')}`}>
+      <ResponsiveContainer>
+        <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 96, left: 8, bottom: 4 }} barCategoryGap={8}>
+          <CartesianGrid horizontal={false} stroke="var(--mantine-color-gray-2)" />
+          <XAxis type="number" domain={[0, BAR_SCALE_MAX]} ticks={[0, 2, 4, 6, 8, 10]} tickLine={false} axisLine={false} fontSize={12} hide={!showAxis} />
+          <YAxis type="category" dataKey="name" width={170} tickLine={false} axisLine={false} fontSize={12} interval={0} />
+          <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--mantine-color-gray-1)' }} />
+          {/* `background` gives each row its full 0–10 track, drawn by BatteryBar as the battery outline. */}
+          <Bar dataKey="bar" maxBarSize={22} minPointSize={1} background={{ fill: 'transparent' }} shape={BatteryBar} isAnimationActive={false} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
 }
 
 /**
@@ -90,6 +145,8 @@ export function PointSummaryView({ summary, fileName }: { summary: PointSummary;
     label: item.total_scans === 0 ? 'Belum di-scan' : String(item.total_scans),
   }));
   const { totals } = summary;
+  const areaRows = groupByArea(rows);
+  const areaItems = groupByArea(summary.items);
   const period = summary.date_from === summary.date_to ? formatDate(summary.date_from) : `${formatDate(summary.date_from)} – ${formatDate(summary.date_to)}`;
 
   return (
@@ -127,22 +184,18 @@ export function PointSummaryView({ summary, fileName }: { summary: PointSummary;
         <Text size="xs" c="dimmed" mb="sm">
           Setiap titik ditampilkan seperti baterai berskala 0–{BAR_SCALE_MAX}: {BAR_SCALE_MAX} scan atau lebih = penuh; angka di kanan adalah jumlah sebenarnya.
         </Text>
-        <div
-          style={{ height: rows.length * 40 + 40 }}
-          role="img"
-          aria-label={`Grafik total scan per titik. ${rows.map((r) => `${r.name}: ${r.total_scans}`).join(', ')}`}
-        >
-          <ResponsiveContainer>
-            <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 96, left: 8, bottom: 4 }} barCategoryGap={8}>
-              <CartesianGrid horizontal={false} stroke="var(--mantine-color-gray-2)" />
-              <XAxis type="number" domain={[0, BAR_SCALE_MAX]} ticks={[0, 2, 4, 6, 8, 10]} tickLine={false} axisLine={false} fontSize={12} />
-              <YAxis type="category" dataKey="name" width={170} tickLine={false} axisLine={false} fontSize={12} interval={0} />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--mantine-color-gray-1)' }} />
-              {/* `background` gives each row its full 0–10 track, drawn by BatteryBar as the battery outline. */}
-              <Bar dataKey="bar" maxBarSize={22} minPointSize={1} background={{ fill: 'transparent' }} shape={BatteryBar} isAnimationActive={false} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {areaRows ? (
+          <Stack gap="lg">
+            {areaRows.map((area, index) => (
+              <div key={area.key}>
+                <AreaHeading name={area.name} items={area.items} />
+                <BatteryChart rows={area.items} showAxis={index === areaRows.length - 1} />
+              </div>
+            ))}
+          </Stack>
+        ) : (
+          <BatteryChart rows={rows} />
+        )}
       </Card>
 
       <Card withBorder radius="md">
@@ -155,32 +208,23 @@ export function PointSummaryView({ summary, fileName }: { summary: PointSummary;
                 <Table.Th>Total scan</Table.Th>
                 <Table.Th>Normal / Tidak normal</Table.Th>
                 <Table.Th>Petugas</Table.Th>
-                <Table.Th>Shift ter-scan</Table.Th>
                 <Table.Th>Scan pertama</Table.Th>
                 <Table.Th>Scan terakhir</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {summary.items.map((item) => {
-                const status = pointStatus(item);
-                return (
-                  <Table.Tr key={item.patrol_point_id} className={status === 'unscanned' ? 'row-danger' : status === 'partial' ? 'row-warning' : undefined}>
-                    <Table.Td>
-                      <Text size="sm" fw={600}>{item.name}</Text>
-                      <Text size="xs" c="dimmed">{item.location}</Text>
-                    </Table.Td>
-                    <Table.Td><StatusBadge item={item} /></Table.Td>
-                    <Table.Td fw={600}>{item.total_scans}</Table.Td>
-                    <Table.Td>
-                      {item.normal_scans} / <Text span size="sm" c={item.abnormal_scans ? 'red' : undefined} fw={item.abnormal_scans ? 600 : undefined}>{item.abnormal_scans}</Text>
-                    </Table.Td>
-                    <Table.Td>{item.officers}</Table.Td>
-                    <Table.Td>{item.scanned_groups}/{item.groups}</Table.Td>
-                    <Table.Td>{formatDateTime(item.first_scanned_at)}</Table.Td>
-                    <Table.Td>{formatDateTime(item.last_scanned_at)}</Table.Td>
-                  </Table.Tr>
-                );
-              })}
+              {areaItems
+                ? areaItems.map((area) => (
+                    <Fragment key={area.key}>
+                      <Table.Tr className="area-row">
+                        <Table.Td colSpan={7}>
+                          <AreaHeading name={area.name} items={area.items} />
+                        </Table.Td>
+                      </Table.Tr>
+                      {area.items.map((item) => <SummaryRow key={item.patrol_point_id} item={item} />)}
+                    </Fragment>
+                  ))
+                : summary.items.map((item) => <SummaryRow key={item.patrol_point_id} item={item} />)}
             </Table.Tbody>
           </Table>
         </Table.ScrollContainer>

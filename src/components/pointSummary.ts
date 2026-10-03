@@ -18,12 +18,13 @@ export function pointStatus(item: PointSummaryItem): 'unscanned' | 'partial' | '
 
 export function pointSummaryCsv(summary: PointSummary): string {
   return toCsv(
-    ['Unit', 'Shift', 'Tanggal dari', 'Tanggal sampai', 'Titik', 'Lokasi', 'Kode NFC', 'Total scan', 'Normal', 'Tidak normal', 'Petugas', 'Shift ter-scan', 'Jumlah shift', 'Scan pertama', 'Scan terakhir'],
+    ['Unit', 'Shift', 'Tanggal dari', 'Tanggal sampai', 'Area', 'Titik', 'Lokasi', 'Kode NFC', 'Total scan', 'Normal', 'Tidak normal', 'Petugas', 'Shift ter-scan', 'Jumlah shift', 'Scan pertama', 'Scan terakhir'],
     summary.items.map((i) => [
       summary.unit.name,
       summary.shift.name,
       summary.date_from,
       summary.date_to,
+      i.area_name,
       i.name,
       i.location,
       i.nfc_code,

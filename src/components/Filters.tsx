@@ -3,6 +3,7 @@ import { DatePickerInput } from '@mantine/dates';
 import { IconCalendar } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { patrolAreasApi } from '@/api/patrolAreas';
 import { patrolPointsApi } from '@/api/patrolPoints';
 import { patrolShiftsApi } from '@/api/patrolShifts';
 import { usersApi } from '@/api/users';
@@ -66,6 +67,36 @@ export function PatrolPointSelect({ value, onChange, scopeUnitId, label }: { val
       searchable
       clearable
       w={showUnitColumn ? 260 : 200}
+    />
+  );
+}
+
+/** Areas of the picked unit (head office without a unit: every unit, with the unit name). */
+export function useAreas(scopeUnitId?: number | null) {
+  const { unitId } = useScopedUnit(scopeUnitId);
+  return useQuery({
+    queryKey: ['patrol-areas', 'all', unitId ?? 'all'],
+    queryFn: () => patrolAreasApi.list({ limit: 100, unit_id: unitId }),
+    select: (data) => data.items,
+    staleTime: 60_000,
+  });
+}
+
+export function AreaSelect({ value, onChange, scopeUnitId, label }: { value: string; onChange: (v: string | null) => void; label?: string } & Scope) {
+  const areas = useAreas(scopeUnitId);
+  const { showUnitColumn, unitName } = useScopedUnit(scopeUnitId);
+  return (
+    <Select
+      label={label}
+      aria-label="Filter area"
+      placeholder="Semua area"
+      data={(areas.data ?? []).map((a) => ({ value: String(a.id), label: showUnitColumn ? `${a.name} — ${unitName(a.unit_id)}` : a.name }))}
+      value={value || null}
+      onChange={onChange}
+      searchable
+      clearable
+      nothingFoundMessage="Belum ada area"
+      w={showUnitColumn ? 240 : 180}
     />
   );
 }

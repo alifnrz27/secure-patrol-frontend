@@ -52,6 +52,7 @@ export const router = createBrowserRouter([
       { path: 'scans', ...page(() => import('@/pages/scans/ScansPage'), 'viewPatrol') },
       { path: 'reports', ...page(() => import('@/pages/reports/ReportsPage'), 'viewPatrol') },
       { path: 'units', ...page(() => import('@/pages/units/UnitsPage'), 'viewUnits') },
+      { path: 'areas', ...page(() => import('@/pages/areas/AreasPage'), 'viewAreas') },
       { path: 'patrol-points', ...page(() => import('@/pages/patrol-points/PatrolPointsPage'), 'viewPatrolPoints') },
       { path: 'shifts', ...page(() => import('@/pages/shifts/ShiftsPage'), 'viewShifts') },
       { path: 'users', ...page(() => import('@/pages/users/UsersPage'), 'viewUsers') },

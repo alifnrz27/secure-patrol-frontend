@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { patrolApi } from '@/api/patrol';
 import { settingsApi } from '@/api/settings';
-import { DateRangeFilter, OfficerSelect, PatrolPointSelect, ShiftSelect } from '@/components/Filters';
+import { AreaSelect, DateRangeFilter, OfficerSelect, PatrolPointSelect, ShiftSelect } from '@/components/Filters';
 import { useUnitScope } from '@/hooks/useUnitScope';
 import { describeError } from '@/lib/api/errors';
 import { downloadBlob } from '@/lib/csv';
@@ -16,6 +16,7 @@ const DEFAULT_PHOTO_MAX_DAYS = 1;
 
 export interface ExportInitialFilters {
   shift_id: string;
+  area_id: string;
   patrol_point_id: string;
   scanned_by: string;
   date_from: string;
@@ -51,6 +52,7 @@ export function ExportExcelDialog({ opened, onClose, initial }: Props) {
   const [unit, setUnit] = useState<string>('all');
   const [shiftId, setShiftId] = useState('');
   const [pointId, setPointId] = useState('');
+  const [areaId, setAreaId] = useState('');
   const [officerId, setOfficerId] = useState('');
   const [range, setRange] = useState<[string, string]>(['', '']);
   const [withPhotos, setWithPhotos] = useState(false);
@@ -63,6 +65,7 @@ export function ExportExcelDialog({ opened, onClose, initial }: Props) {
     if (!opened) return;
     setUnit(unitId ? String(unitId) : 'all');
     setShiftId(initial.shift_id);
+    setAreaId(initial.area_id);
     setPointId(initial.patrol_point_id);
     setOfficerId(initial.scanned_by);
     setRange([initial.date_from || todayDate(), initial.date_to || initial.date_from || todayDate()]);
@@ -108,6 +111,7 @@ export function ExportExcelDialog({ opened, onClose, initial }: Props) {
         {
           unit_id: scopeUnit ?? undefined,
           shift_id: shiftId ? Number(shiftId) : undefined,
+          area_id: areaId ? Number(areaId) : undefined,
           patrol_point_id: pointId ? Number(pointId) : undefined,
           scanned_by: officerId ? Number(officerId) : undefined,
           date_from: from,
@@ -132,6 +136,7 @@ export function ExportExcelDialog({ opened, onClose, initial }: Props) {
   const changeUnit = (value: string) => {
     setUnit(value);
     setShiftId('');
+    setAreaId('');
     setPointId('');
     setOfficerId('');
   };
@@ -151,6 +156,9 @@ export function ExportExcelDialog({ opened, onClose, initial }: Props) {
         )}
         <Group grow align="flex-start">
           <ShiftSelect label="Shift" value={shiftId} onChange={(v) => setShiftId(v ?? '')} scopeUnitId={scopeUnit} />
+          <AreaSelect label="Area" value={areaId} onChange={(v) => setAreaId(v ?? '')} scopeUnitId={scopeUnit} />
+        </Group>
+        <Group grow align="flex-start">
           <PatrolPointSelect label="Titik" value={pointId} onChange={(v) => setPointId(v ?? '')} scopeUnitId={scopeUnit} />
         </Group>
         <Group grow align="flex-start">
@@ -195,7 +203,7 @@ export function ExportExcelDialog({ opened, onClose, initial }: Props) {
           </Group>
         )}
         <Text size="xs" c="dimmed">
-          Kolom: Waktu scan, Diterima server, Dikirim offline, Tanggal shift, Unit, Shift, Titik, Lokasi, Kondisi, Catatan, Petugas,
+          Kolom: Waktu scan, Diterima server, Dikirim offline, Tanggal shift, Unit, Shift, Area, Titik, Lokasi, Kondisi, Catatan, Petugas,
           Email petugas{withPhotos ? ', Foto 1–3' : ''}.
         </Text>
         <Group justify="flex-end">

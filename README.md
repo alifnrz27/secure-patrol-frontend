@@ -124,7 +124,7 @@ src/
 |---|---|---|---|
 | Dashboard, Monitoring, Titik per Shift, Riwayat Scan, Laporan, Export | semua unit | semua unit | unit sendiri |
 | Unit: lihat / tambah, ubah, hapus | ✓ / ✓ | ✓ / – | – / – (menu tidak tampil) |
-| Titik Patroli, Pengaturan Shift: lihat / kelola | ✓ / – | ✓ / – | ✓ / ✓ |
+| Area, Titik Patroli, Pengaturan Shift: lihat / kelola | ✓ / – | ✓ / – | ✓ / ✓ |
 | Pengguna: lihat / kelola | ✓ / ✓ | ✓ / ✓ (seperti Super-Admin) | ✓ / ✓ (role unit saja) |
 | Role | ✓ | – | – |
 | App Client, Tampilan Aplikasi | ✓ | – | – |
@@ -159,6 +159,10 @@ src/
   "Pilih shift" untuk shift dan rentang tanggal lain, diperbarui otomatis tiap 30 detik, tombol layar penuh. Link lama
   `/reports?view=points` diarahkan ke halaman ini. Grafik batang horizontal skala 0–10: ≥ 10 scan selalu penuh, angka sebenarnya di ujung bar; titik belum
   di-scan / terlewat disorot; ekspor CSV.
+- **Area** (`/patrol-areas`, menu Master Data → Area): kelompok titik dalam satu unit (gedung, lantai, parkir). Dikelola
+  Kepala/Admin Keamanan; pusat hanya melihat. Hapus hanya area kosong (jumlah titik menaut ke daftar titik area itu).
+  Field Area di form titik; kolom dan filter Area di Titik Patroli, Titik per Shift, Riwayat Scan (dan CSV), export Excel,
+  dan Rekap per titik. Checklist Monitoring/Dashboard dan Rekap per titik dikelompokkan per area dengan subtotal.
 - **Ekspor Excel**: dialog berisi Unit (pusat), Shift, Titik, Petugas, tanggal (wajib, maksimal `export_max_range_days`
   hari) dan "Sertakan foto" (maksimal `export_photo_max_range_days` hari). untuk user pusat (awal dari pemilih unit); CSV ikut `unit_id` pemilih dan
   punya kolom Unit.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { barValue, pointStatus } from './pointSummary';
 
-const item = { patrol_point_id: 1, name: 'A', location: '', nfc_code: '', groups: 3, scanned_groups: 3, total_scans: 5, normal_scans: 5, abnormal_scans: 0, officers: 1, first_scanned_at: null, last_scanned_at: null };
+const item = { patrol_point_id: 1, area_id: null, area_name: '', name: 'A', location: '', nfc_code: '', groups: 3, scanned_groups: 3, total_scans: 5, normal_scans: 5, abnormal_scans: 0, officers: 1, first_scanned_at: null, last_scanned_at: null };
 
 describe('point summary', () => {
   it('caps bars at 10 scans and keeps smaller values proportional', () => {

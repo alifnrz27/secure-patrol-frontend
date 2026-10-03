@@ -86,3 +86,7 @@ body {
 .unit-card:hover {
   background: var(--mantine-color-gray-0);
 }
+
+.area-row td {
+  background: var(--mantine-color-gray-0);
+}

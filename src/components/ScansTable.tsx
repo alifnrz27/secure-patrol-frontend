@@ -6,13 +6,14 @@ import { ConditionBadge, YesNoBadge } from './Badges';
 
 export function ScansTable({ scans, onOpen, showShift = true, showUnit = false }: { scans: PatrolScan[]; onOpen: (id: number) => void; showShift?: boolean; showUnit?: boolean }) {
   return (
-    <Table.ScrollContainer minWidth={1100}>
+    <Table.ScrollContainer minWidth={1200}>
       <Table>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Waktu scan</Table.Th>
             {showUnit && <Table.Th>Unit</Table.Th>}
             {showShift && <Table.Th>Shift</Table.Th>}
+            <Table.Th>Area</Table.Th>
             <Table.Th>Titik</Table.Th>
             <Table.Th>Kondisi</Table.Th>
             <Table.Th>Catatan</Table.Th>
@@ -52,6 +53,7 @@ export function ScansTable({ scans, onOpen, showShift = true, showUnit = false }
                   <Text size="xs" c="dimmed">{formatDate(scan.group.shift_date)}</Text>
                 </Table.Td>
               )}
+              <Table.Td>{scan.patrol_point.area_name || <Text span size="sm" c="dimmed">-</Text>}</Table.Td>
               <Table.Td>
                 <Text size="sm" fw={600}>{scan.patrol_point.name}</Text>
                 <Text size="xs" c="dimmed">{scan.patrol_point.location}</Text>

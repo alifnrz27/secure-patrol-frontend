@@ -11,7 +11,7 @@ import type { RoleCode } from '@/lib/api/types';
 // | Dashboard, Monitoring, Titik per Shift,   |  semua unit |    semua unit    |          unit sendiri          |
 // |   Riwayat Scan, Laporan, Export           |             |                  |                                |
 // | Unit: lihat / kelola                      |    ✓ / ✓    |      ✓ / -       |             - / -              |
-// | Titik Patroli, Shift: lihat / kelola      |    ✓ / -    |      ✓ / -       |             ✓ / ✓              |
+// | Area, Titik Patroli, Shift: lihat / kelola|    ✓ / -    |      ✓ / -       |             ✓ / ✓              |
 // | Pengguna: lihat / kelola                  |    ✓ / ✓    |      ✓ / ✓       |   ✓ / ✓ (role unit saja)       |
 // | Role (menu): lihat / kelola               |    ✓ / ✓    |                  |                                |
 // | App Client, Tampilan Aplikasi             |      ✓      |                  |                                |
@@ -30,6 +30,9 @@ export const PERMISSIONS = {
   viewUnits: HEAD_OFFICE_ROLES,
   // Create, edit (incl. deactivate) and delete: Super-Admin only. Unit roles cannot even open the page.
   manageUnits: SUPER_ADMIN,
+  viewAreas: WEB_USERS,
+  /** Areas, like patrol points, are managed by each unit. */
+  manageAreas: UNIT_MANAGERS,
   viewPatrolPoints: WEB_USERS,
   managePatrolPoints: UNIT_MANAGERS,
   viewShifts: WEB_USERS,

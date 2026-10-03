@@ -132,9 +132,22 @@ export interface AppClientCredential extends AppClient {
   warning?: string;
 }
 
+/** Area of a unit (building, floor, parking) that groups patrol points. */
+export interface PatrolArea {
+  id: number;
+  unit_id: number;
+  name: string;
+  description: string;
+  patrol_points_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PatrolPoint {
   id: number;
   unit_id: number;
+  area_id: number | null;
+  area: { id: number; name: string } | null;
   name: string;
   location: string;
   nfc_code: string;
@@ -201,6 +214,9 @@ export interface PatrolUserSummary {
 
 export interface PatrolListItem {
   id: number;
+  area_id: number | null;
+  /** Area name while the shift ran ("" = no area) */
+  area_name: string;
   group?: PatrolGroupSummary;
   patrol_point_id: number;
   name: string;
@@ -228,6 +244,8 @@ export interface PatrolScan {
   patrol_point: {
     patrol_list_item_id: number;
     patrol_point_id: number;
+    area_id: number | null;
+    area_name: string;
     name: string;
     location: string;
     nfc_code: string;
@@ -364,6 +382,8 @@ export interface LicensePublicStatus {
 
 export interface PointSummaryItem {
   patrol_point_id: number;
+  area_id: number | null;
+  area_name: string;
   name: string;
   location: string;
   nfc_code: string;
@@ -385,6 +405,8 @@ export interface PointSummary {
   unit: { id: number; code: string; name: string };
   shift: { id: number; name: string };
   group_id: number | null;
+  /** Set when filtered by area */
+  area_id?: number | null;
   date_from: string;
   date_to: string;
   groups: number;

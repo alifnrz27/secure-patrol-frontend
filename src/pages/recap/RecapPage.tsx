@@ -1,4 +1,4 @@
-import { ActionIcon, AppShell, Badge, Card, Container, Group, Loader, SegmentedControl, Stack, Text, Title, Tooltip } from '@mantine/core';
+import { ActionIcon, AppShell, Card, Container, Group, Loader, SegmentedControl, Stack, Text, Title, Tooltip } from '@mantine/core';
 import { IconArrowLeft, IconMaximize, IconMinimize, IconRefresh } from '@tabler/icons-react';
 import { useIsFetching, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -7,7 +7,7 @@ import { patrolApi } from '@/api/patrol';
 import { LicenseBannerBar } from '@/app/LicenseScreens';
 import { GroupStatusBadge } from '@/components/Badges';
 import { BrandLogo } from '@/components/BrandLogo';
-import { DateRangeFilter, ShiftSelect } from '@/components/Filters';
+import { AreaSelect, DateRangeFilter, ShiftSelect } from '@/components/Filters';
 import { PointSummaryView } from '@/components/PointSummaryView';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/StateViews';
 import { UnitPicker } from '@/components/UnitPicker';
@@ -20,7 +20,7 @@ import { dayjs, formatDate, formatRemaining, formatTime, todayDate } from '@/lib
 /** How often the page refreshes itself (paused while the tab is hidden). */
 const REFRESH_MS = 30_000;
 const MAX_DAYS = 31;
-const KEYS = ['shift_id', 'date_from', 'date_to'] as const;
+const KEYS = ['shift_id', 'area_id', 'date_from', 'date_to'] as const;
 
 function isNoActiveShift(error: unknown) {
   return isApiError(error) && error.kind === 'validation' && error.mentions('no active patrol shift');
@@ -77,7 +77,7 @@ function FullscreenButton() {
 }
 
 /** Default mode: the shift running now (the current group), refreshed every 30 seconds. */
-function ActiveShiftRecap({ unitId }: { unitId: number | undefined }) {
+function ActiveShiftRecap({ unitId, areaId }: { unitId: number | undefined; areaId: number | undefined }) {
   useNow(); // keeps the remaining time current
   const current = useQuery({
     queryKey: ['recap', 'current', unitId ?? 'own'],
@@ -87,8 +87,8 @@ function ActiveShiftRecap({ unitId }: { unitId: number | undefined }) {
   });
   const groupId = current.data?.id;
   const summary = useQuery({
-    queryKey: ['recap', 'summary', { group_id: groupId }],
-    queryFn: () => patrolApi.pointSummary({ group_id: groupId! }),
+    queryKey: ['recap', 'summary', { group_id: groupId, area_id: areaId }],
+    queryFn: () => patrolApi.pointSummary({ group_id: groupId!, area_id: areaId }),
     enabled: Boolean(groupId),
     refetchInterval: REFRESH_MS,
   });
@@ -137,10 +137,10 @@ function ActiveShiftRecap({ unitId }: { unitId: number | undefined }) {
 }
 
 /** Chosen mode: one shift (its unit) over a date range, refreshed every 30 seconds. */
-function ChosenShiftRecap({ shiftId, dateFrom, dateTo }: { shiftId: number | undefined; dateFrom: string; dateTo: string }) {
+function ChosenShiftRecap({ shiftId, areaId, dateFrom, dateTo }: { shiftId: number | undefined; areaId: number | undefined; dateFrom: string; dateTo: string }) {
   const summary = useQuery({
-    queryKey: ['recap', 'summary', { shift_id: shiftId, date_from: dateFrom, date_to: dateTo }],
-    queryFn: () => patrolApi.pointSummary({ shift_id: shiftId!, date_from: dateFrom, date_to: dateTo }),
+    queryKey: ['recap', 'summary', { shift_id: shiftId, area_id: areaId, date_from: dateFrom, date_to: dateTo }],
+    queryFn: () => patrolApi.pointSummary({ shift_id: shiftId!, area_id: areaId, date_from: dateFrom, date_to: dateTo }),
     enabled: Boolean(shiftId),
     refetchInterval: REFRESH_MS,
   });
@@ -234,7 +234,7 @@ export default function RecapPage() {
                 />
               </>
             )}
-            <Badge variant="light" color="gray">Otomatis diperbarui setiap {REFRESH_MS / 1000} detik</Badge>
+            <AreaSelect value={filters.area_id} onChange={(area_id) => setFilters({ area_id })} />
           </Group>
 
           {needsUnit ? (
@@ -242,13 +242,13 @@ export default function RecapPage() {
               <EmptyState title="Pilih unit" description="Shift aktif ditampilkan per unit. Pilih unit di kanan atas." />
             </Card>
           ) : mode === 'active' ? (
-            <ActiveShiftRecap unitId={unitId} />
+            <ActiveShiftRecap unitId={unitId} areaId={toNumber(filters.area_id)} />
           ) : rangeTooLong ? (
             <Card withBorder radius="md">
               <EmptyState title={`Rentang maksimal ${MAX_DAYS} hari`} />
             </Card>
           ) : (
-            <ChosenShiftRecap shiftId={toNumber(filters.shift_id)} dateFrom={dateFrom} dateTo={dateTo} />
+            <ChosenShiftRecap shiftId={toNumber(filters.shift_id)} areaId={toNumber(filters.area_id)} dateFrom={dateFrom} dateTo={dateTo} />
           )}
         </Container>
       </AppShell.Main>
