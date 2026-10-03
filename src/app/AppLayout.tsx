@@ -12,6 +12,7 @@ import {
   IconHelp,
   IconHistory,
   IconLayoutDashboard,
+  IconLicense,
   IconListCheck,
   IconLogout,
   IconMapPin,
@@ -24,6 +25,7 @@ import {
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { LicenseBannerBar } from '@/app/LicenseScreens';
 import { BrandLogo } from '@/components/BrandLogo';
 import { UnitPicker } from '@/components/UnitPicker';
 import { useBranding } from '@/hooks/useBranding';
@@ -69,6 +71,7 @@ const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
         children: [
           { to: '/settings', label: 'Pengaturan Sistem', icon: <IconAdjustments size={16} />, permission: 'viewSettings' },
           { to: '/settings/branding', label: 'Tampilan Aplikasi', icon: <IconPalette size={16} />, permission: 'manageBranding' },
+          { to: '/settings/license', label: 'License', icon: <IconLicense size={16} />, permission: 'manageLicense' },
         ],
       },
     ],
@@ -224,7 +227,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </ScrollArea>
       </AppShell.Navbar>
 
-      <AppShell.Main>{children}</AppShell.Main>
+      <AppShell.Main>
+        <LicenseBannerBar />
+        {children}
+      </AppShell.Main>
     </AppShell>
   );
 }

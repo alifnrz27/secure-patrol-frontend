@@ -3,10 +3,12 @@ import { DatesProvider } from '@mantine/dates';
 import { ModalsProvider } from '@mantine/modals';
 import { Notifications } from '@mantine/notifications';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { useSession } from '@/hooks/useSession';
+import { appBlock } from '@/lib/api/appBlock';
 import { setDisplayTimezone } from '@/lib/format';
+import { AppBlockedScreen } from './LicenseScreens';
 import { queryClient } from './queryClient';
 import { router } from './router';
 
@@ -32,6 +34,7 @@ function SessionEffects() {
 }
 
 export function App() {
+  const appBlocked = useSyncExternalStore(appBlock.subscribe, appBlock.get);
   return (
     <MantineProvider theme={theme} defaultColorScheme="light">
       <DatesProvider settings={{ locale: 'id', firstDayOfWeek: 1 }}>
@@ -39,7 +42,7 @@ export function App() {
           <ModalsProvider labels={{ confirm: 'Ya', cancel: 'Batal' }}>
             <Notifications position="top-right" />
             <SessionEffects />
-            <RouterProvider router={router} />
+            {appBlocked ? <AppBlockedScreen /> : <RouterProvider router={router} />}
           </ModalsProvider>
         </QueryClientProvider>
       </DatesProvider>

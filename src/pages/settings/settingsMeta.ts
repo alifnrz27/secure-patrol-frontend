@@ -4,6 +4,7 @@ export const GROUPS: { key: SettingGroup; title: string; description: string }[]
   { key: 'patrol', title: 'Patroli', description: 'Aturan saat petugas memindai titik patroli.' },
   { key: 'face', title: 'Validasi Wajah', description: 'Pencocokan wajah saat scan dan pemeriksaan foto wajah referensi pengguna.' },
   { key: 'security', title: 'Keamanan & Sesi', description: 'Penguncian akun dan masa berlaku login.' },
+  { key: 'export', title: 'Export', description: 'Batas rentang tanggal export Excel riwayat scan.' },
 ];
 
 /** Indonesian labels; unknown keys fall back to the server's (English) description. */
@@ -39,6 +40,14 @@ const META: Record<string, { label: string; description: string }> = {
   face_max_turn_ratio: {
     label: 'Toleh kepala maksimum',
     description: 'Batas kepala menoleh ke samping pada foto referensi. Makin kecil makin ketat.',
+  },
+  export_max_range_days: {
+    label: 'Rentang maksimal export',
+    description: 'Jumlah hari tanggal shift maksimal dalam satu file export Excel.',
+  },
+  export_photo_max_range_days: {
+    label: 'Rentang maksimal export dengan foto',
+    description: 'Jumlah hari maksimal jika export menyertakan foto (file jauh lebih besar).',
   },
   login_max_failed_attempts: {
     label: 'Batas salah password',

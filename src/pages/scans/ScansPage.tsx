@@ -1,7 +1,7 @@
-import { Badge, Button, Card, CloseButton, Group, List, Menu, Modal, SegmentedControl, Select, Stack, Text } from '@mantine/core';
+import { Badge, Button, Card, CloseButton, Group, Menu, SegmentedControl, Text } from '@mantine/core';
 import { IconChevronDown, IconDownload, IconFileSpreadsheet, IconFileText } from '@tabler/icons-react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { patrolApi, type ScanListParams } from '@/api/patrol';
 import { DateRangeFilter, OfficerSelect, PatrolPointSelect, ShiftSelect } from '@/components/Filters';
 import { useExport } from '@/components/ExportProgress';
@@ -14,10 +14,10 @@ import { usePermission } from '@/hooks/useSession';
 import { useUnitScope } from '@/hooks/useUnitScope';
 import { toNumber, toPage, useUrlFilters } from '@/hooks/useUrlFilters';
 import type { PatrolScan, ScanCondition } from '@/lib/api/types';
-import { downloadBlob, downloadCsv, toCsv } from '@/lib/csv';
-import { formatDate, formatDateTime, isSentOffline, nowTz, todayDate } from '@/lib/format';
-import { notifyError, notifySuccess } from '@/lib/notify';
+import { downloadCsv, toCsv } from '@/lib/csv';
+import { formatDate, formatDateTime, isSentOffline, todayDate } from '@/lib/format';
 import { fetchAllPages, MAX_PAGE_SIZE } from '@/lib/pagination';
+import { ExportExcelDialog } from './ExportExcelDialog';
 
 const KEYS = ['group_id', 'shift_id', 'date_from', 'date_to', 'scanned_by', 'patrol_point_id', 'condition', 'page', 'limit'] as const;
 
@@ -55,7 +55,7 @@ export default function ScansPage() {
   const { filters, setFilters, resetFilters } = useUrlFilters(KEYS, { limit: '20' });
   const [scanId, setScanId] = useState<number | null>(null);
   const exporter = useExport();
-  const { isHeadOffice, unitId, showUnitColumn, units } = useUnitScope();
+  const { unitId, showUnitColumn } = useUnitScope();
 
   const filterParams: ScanListParams = {
     unit_id: unitId,
@@ -71,33 +71,19 @@ export default function ScansPage() {
   const query = useQuery({ queryKey: ['patrol-scans', 'list', params], queryFn: () => patrolApi.scans(params), placeholderData: keepPreviousData });
   const hasFilter = KEYS.some((k) => k !== 'page' && k !== 'limit' && filters[k]);
 
-  // The server export ignores condition and group, so it is offered only when
-  // the file would match what the table shows.
-  const excelUnsupported = [filters.condition && 'kondisi', filters.group_id && 'group'].filter(Boolean).join(' dan ');
-  const [excelRunning, setExcelRunning] = useState(false);
-  // Excel dialog: head office users can pick the unit for the file (starts from the header picker).
-  const [excelDialog, setExcelDialog] = useState(false);
-  const [excelUnit, setExcelUnit] = useState<string>('all');
-  const openExcelDialog = () => {
-    setExcelUnit(unitId ? String(unitId) : 'all');
-    setExcelDialog(true);
-  };
-  const exportExcel = async () => {
-    setExcelRunning(true);
-    try {
-      const { shift_id, patrol_point_id, scanned_by, date_from, date_to } = filterParams;
-      const unit_id = isHeadOffice && excelUnit !== 'all' ? Number(excelUnit) : undefined;
-      const blob = await patrolApi.exportScansExcel({ unit_id, shift_id, patrol_point_id, scanned_by, date_from, date_to });
-      setExcelDialog(false);
-      // Content-Disposition is not exposed through CORS, so the name is built here (same pattern as the server).
-      downloadBlob(`riwayat-scan_${nowTz().format('YYYYMMDD-HHmmss')}.xlsx`, blob);
-      notifySuccess('File Excel diunduh.');
-    } catch (error) {
-      notifyError(error);
-    } finally {
-      setExcelRunning(false);
-    }
-  };
+  // The Excel dialog starts from the page filters; condition and group are not supported by the server export.
+  const [excelOpen, setExcelOpen] = useState(false);
+  const excelInitial = useMemo(
+    () => ({
+      shift_id: filters.shift_id,
+      patrol_point_id: filters.patrol_point_id,
+      scanned_by: canFilterOfficer ? filters.scanned_by : '',
+      date_from: filters.date_from,
+      date_to: filters.date_to,
+      unsupported: [filters.condition && 'kondisi', filters.group_id && 'group'].filter(Boolean).join(' dan '),
+    }),
+    [filters, canFilterOfficer],
+  );
 
   const exportCsv = () =>
     exporter.run(async (signal, onProgress) => {
@@ -118,7 +104,7 @@ export default function ScansPage() {
                 leftSection={<IconDownload size={16} />}
                 rightSection={<IconChevronDown size={14} />}
                 variant="light"
-                loading={exporter.running || excelRunning}
+                loading={exporter.running}
                 disabled={!query.data?.pagination.total}
               >
                 Ekspor
@@ -126,11 +112,9 @@ export default function ScansPage() {
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Label>Sesuai filter yang aktif</Menu.Label>
-              <Menu.Item leftSection={<IconFileSpreadsheet size={16} />} disabled={Boolean(excelUnsupported)} onClick={openExcelDialog}>
+              <Menu.Item leftSection={<IconFileSpreadsheet size={16} />} onClick={() => setExcelOpen(true)}>
                 <Text size="sm">Excel (.xlsx)</Text>
-                <Text size="xs" c="dimmed">
-                  {excelUnsupported ? `Filter ${excelUnsupported} tidak didukung; gunakan CSV.` : 'Dibuat server, maksimal 50.000 baris.'}
-                </Text>
+                <Text size="xs" c="dimmed">Dibuat server; pilih rentang tanggal (wajib) dan opsi foto.</Text>
               </Menu.Item>
               <Menu.Item leftSection={<IconFileText size={16} />} onClick={() => void exportCsv()}>
                 <Text size="sm">CSV</Text>
@@ -180,34 +164,7 @@ export default function ScansPage() {
       </Card>
       <ScanDetailDrawer scanId={scanId} onClose={() => setScanId(null)} />
       {exporter.modal}
-      <Modal opened={excelDialog} onClose={() => setExcelDialog(false)} title="Ekspor Excel" centered>
-        <Stack>
-          {isHeadOffice && (
-            <Select
-              label="Unit"
-              data={[{ value: 'all', label: 'Semua unit' }, ...units.map((u) => ({ value: String(u.id), label: u.name }))]}
-              value={excelUnit}
-              onChange={(v) => v && setExcelUnit(v)}
-              allowDeselect={false}
-            />
-          )}
-          <div>
-            <Text size="sm" fw={500} mb={4}>Filter lain dari halaman ini</Text>
-            <List size="sm" c="dimmed" spacing={2}>
-              {!isHeadOffice && <List.Item>Unit: hanya unit Anda</List.Item>}
-              <List.Item>Tanggal shift: {filters.date_from ? `${formatDate(filters.date_from)} – ${formatDate(filters.date_to)}` : 'semua'}</List.Item>
-              <List.Item>Shift, titik, petugas: {[filters.shift_id, filters.patrol_point_id, filters.scanned_by].some(Boolean) ? 'sesuai filter aktif' : 'semua'}</List.Item>
-            </List>
-          </div>
-          <Text size="xs" c="dimmed">
-            Kolom: Waktu scan, Diterima server, Dikirim offline, Tanggal shift, Unit, Shift, Titik, Lokasi, Kondisi, Catatan, Petugas, Email petugas. Maksimal 50.000 baris.
-          </Text>
-          <Group justify="flex-end">
-            <Button variant="default" onClick={() => setExcelDialog(false)}>Batal</Button>
-            <Button leftSection={<IconFileSpreadsheet size={16} />} onClick={() => void exportExcel()} loading={excelRunning}>Unduh Excel</Button>
-          </Group>
-        </Stack>
-      </Modal>
+      <ExportExcelDialog opened={excelOpen} onClose={() => setExcelOpen(false)} initial={excelInitial} />
     </>
   );
 }

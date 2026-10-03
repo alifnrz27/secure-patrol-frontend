@@ -45,6 +45,8 @@ export const PERMISSIONS = {
   manageAppClients: SUPER_ADMIN,
   /** App name and logo (Pengaturan → Tampilan Aplikasi). */
   manageBranding: SUPER_ADMIN,
+  /** License status, usage and install (Pengaturan → License). */
+  manageLicense: SUPER_ADMIN,
   viewAuditLogs: SUPER_ADMIN,
   viewSettings: WEB_USERS,
   /** Super-Admin edits the global values, unit managers the values of their unit. */

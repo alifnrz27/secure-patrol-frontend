@@ -51,6 +51,7 @@ export const router = createBrowserRouter([
       { path: 'audit-logs', ...page(() => import('@/pages/audit-logs/AuditLogsPage'), 'viewAuditLogs') },
       { path: 'settings', ...page(() => import('@/pages/settings/SettingsPage'), 'viewSettings') },
       { path: 'settings/branding', ...page(() => import('@/pages/settings/BrandingPage'), 'manageBranding') },
+      { path: 'settings/license', ...page(() => import('@/pages/settings/LicensePage'), 'manageLicense') },
       { path: 'help-desk', ...page(() => import('@/pages/help-desk/HelpDeskPage'), 'viewPatrol') },
       { path: 'profile', ...page(() => import('@/pages/profile/ProfilePage'), 'webAccess') },
       { path: '*', element: <NotFoundPage /> },

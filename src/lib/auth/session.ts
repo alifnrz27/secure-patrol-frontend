@@ -1,8 +1,9 @@
 import { apiFetch, setAuthHandler, syncClockWithServer } from '@/lib/api/client';
 import { serverNow } from '@/lib/api/clock';
-import { ApiError, isApiError, UNIT_INACTIVE } from '@/lib/api/errors';
-import type { AppConfig, LoginUser, TokenResponse, User } from '@/lib/api/types';
-import { hasPermission } from '@/lib/permissions';
+import { ApiError, isApiError, LICENSE_INACTIVE, UNIT_INACTIVE, UNIT_OVER_LICENSE } from '@/lib/api/errors';
+import { isLicenseLocked } from '@/lib/license';
+import type { AppConfig, LicenseSummary, LoginUser, Profile, TokenResponse, User } from '@/lib/api/types';
+import { hasPermission, SUPER_ADMIN_ROLE } from '@/lib/permissions';
 
 // Session rules (backend docs/AUTH.md):
 // - The access token lives only in memory.
@@ -19,7 +20,7 @@ const PEER_TOKEN_WAIT_MS = 400;
 const BROADCAST_WAIT_MS = 1500;
 
 export type SessionStatus = 'loading' | 'authenticated' | 'unauthenticated';
-export type SessionEndReason = 'expired' | 'logout' | 'forbidden' | 'unit_inactive' | null;
+export type SessionEndReason = 'expired' | 'logout' | 'forbidden' | 'unit_inactive' | 'license_inactive' | 'unit_over_license' | null;
 
 /** Message of the error thrown when a role may not use the web admin (e.g. security_team). */
 export const WEB_ACCESS_DENIED = 'this role is not allowed to use the web admin';
@@ -28,6 +29,8 @@ export interface SessionState {
   status: SessionStatus;
   user: User | null;
   config: AppConfig | null;
+  /** License summary for the banner and the locked mode (null until known). */
+  license: LicenseSummary | null;
   /** data: URL of the face photo from the login response; kept in memory only. */
   avatarDataUrl: string | null;
   endReason: SessionEndReason;
@@ -36,7 +39,7 @@ export interface SessionState {
 }
 
 type ChannelMessage =
-  | { type: 'tokens'; accessToken: string; expiresAt: number; refreshToken: string; user?: User; config?: AppConfig }
+  | { type: 'tokens'; accessToken: string; expiresAt: number; refreshToken: string; user?: User; config?: AppConfig; license?: LicenseSummary | null }
   | { type: 'token-request' }
   | { type: 'logout'; reason: SessionEndReason };
 
@@ -76,6 +79,7 @@ class SessionManager {
     status: 'loading',
     user: null,
     config: null,
+    license: null,
     avatarDataUrl: null,
     endReason: null,
     bootError: null,
@@ -114,7 +118,13 @@ class SessionManager {
       getAccessToken: () => this.getAccessToken(),
       handleUnauthorized: (usedToken) => this.handleUnauthorized(usedToken),
       handleRevoked: (reason) => {
-        if (this.state.status !== 'unauthenticated') this.end(reason);
+        if (this.state.status === 'unauthenticated') return;
+        // A locked license keeps the Super-Admin signed in, on the License page only.
+        if (reason === 'license_inactive' && this.state.user?.role.code === SUPER_ADMIN_ROLE) {
+          if (!isLicenseLocked(this.state.license?.status)) void this.refreshProfile().catch(() => undefined);
+          return;
+        }
+        this.end(reason);
       },
     });
 
@@ -142,16 +152,17 @@ class SessionManager {
       const fromPeer = await this.requestTokenFromPeers();
       if (!fromPeer && !(await this.refresh())) return;
 
-      const [user, config] = await Promise.all([
-        apiFetch<User>('/auth/me'),
+      const [profile, config] = await Promise.all([
+        apiFetch<Profile>('/auth/me'),
         apiFetch<AppConfig>('/app-config'),
       ]);
+      const { license = null, ...user } = profile;
       if (!hasPermission(user.role.code, 'webAccess')) {
         await apiFetch('/auth/logout', { method: 'POST' }).catch(() => undefined);
         this.end('forbidden');
         return;
       }
-      this.setState({ status: 'authenticated', user, config, endReason: null, bootError: null });
+      this.setState({ status: 'authenticated', user, config, license, endReason: null, bootError: null });
     } catch (error) {
       if (isApiError(error) && (error.kind === 'network' || error.kind === 'server' || error.kind === 'app')) {
         this.setState({ status: 'loading', bootError: error });
@@ -242,7 +253,15 @@ class SessionManager {
         });
       } catch (error) {
         if (isApiError(error) && (error.kind === 'unauthorized' || error.kind === 'validation' || error.kind === 'forbidden')) {
-          this.end(error.mentions(UNIT_INACTIVE) ? 'unit_inactive' : 'expired');
+          this.end(
+            error.mentions(UNIT_INACTIVE)
+              ? 'unit_inactive'
+              : error.mentions(LICENSE_INACTIVE)
+                ? 'license_inactive'
+                : error.mentions(UNIT_OVER_LICENSE)
+                  ? 'unit_over_license'
+                  : 'expired',
+          );
           return false;
         }
         throw error;
@@ -257,9 +276,10 @@ class SessionManager {
         refreshToken: tokens.refresh_token,
         user: withoutPhoto(tokens.user),
         config: tokens.config,
+        license: tokens.license ?? null,
       });
       if (this.state.status === 'authenticated') {
-        this.setState({ user: withoutPhoto(tokens.user), config: tokens.config });
+        this.setState({ user: withoutPhoto(tokens.user), config: tokens.config, license: tokens.license ?? this.state.license });
       }
       return true;
     });
@@ -324,11 +344,12 @@ class SessionManager {
     writeRefreshToken(tokens.refresh_token);
     const user = withoutPhoto(tokens.user);
     const { face_photo_base64: base64, face_photo_mime_type: mime } = tokens.user;
-    this.post({ type: 'tokens', accessToken: tokens.access_token, expiresAt: this.expiresAt, refreshToken: tokens.refresh_token, user, config: tokens.config });
+    this.post({ type: 'tokens', accessToken: tokens.access_token, expiresAt: this.expiresAt, refreshToken: tokens.refresh_token, user, config: tokens.config, license: tokens.license ?? null });
     this.setState({
       status: 'authenticated',
       user,
       config: tokens.config,
+      license: tokens.license ?? null,
       avatarDataUrl: base64 && mime ? `data:${mime};base64,${base64}` : null,
       endReason: null,
       bootError: null,
@@ -369,6 +390,12 @@ class SessionManager {
     if (this.state.status === 'authenticated') this.setState({ config });
   }
 
+  /** Reloads profile and license summary (e.g. after installing a license). */
+  async refreshProfile(): Promise<void> {
+    const { license = null, ...user } = await apiFetch<Profile>('/auth/me');
+    if (this.state.status === 'authenticated') this.setState({ user, license });
+  }
+
   /** Updates the cached profile after the user edits it. */
   setUser(user: User): void {
     this.setState({ user });
@@ -383,7 +410,7 @@ class SessionManager {
     this.refreshTimer = null;
     writeRefreshToken(null);
     if (broadcast) this.post({ type: 'logout', reason });
-    this.setState({ status: 'unauthenticated', user: null, config: null, avatarDataUrl: null, endReason: reason, bootError: null });
+    this.setState({ status: 'unauthenticated', user: null, config: null, license: null, avatarDataUrl: null, endReason: reason, bootError: null });
   }
 
   // ---- cross-tab ----
@@ -397,10 +424,14 @@ class SessionManager {
       case 'tokens': {
         this.setTokens(message.accessToken, message.expiresAt, message.refreshToken);
         if (this.state.status === 'authenticated') {
-          this.setState({ user: message.user ?? this.state.user, config: message.config ?? this.state.config });
+          this.setState({
+            user: message.user ?? this.state.user,
+            config: message.config ?? this.state.config,
+            license: message.license !== undefined ? message.license : this.state.license,
+          });
         } else if (this.state.status === 'unauthenticated' && message.user && message.config) {
           // Logged in from another tab.
-          this.setState({ status: 'authenticated', user: message.user, config: message.config, endReason: null });
+          this.setState({ status: 'authenticated', user: message.user, config: message.config, license: message.license ?? null, endReason: null });
         }
         break;
       }

@@ -4,7 +4,7 @@ import { hasPermission, isHeadOfficeRole, type Permission } from './permissions'
 const ALL: Permission[] = [
   'viewPatrol', 'viewUnits', 'manageUnits', 'viewPatrolPoints', 'managePatrolPoints', 'viewShifts', 'manageShifts',
   'viewUsers', 'manageUsers', 'manageHeadOfficeUsers', 'viewRoles', 'manageRoles', 'manageAppClients', 'viewAuditLogs',
-  'viewSettings', 'editSettings', 'viewHelpDeskDrafts', 'manageHelpDesk', 'filterScansByOfficer', 'manageBranding',
+  'viewSettings', 'editSettings', 'viewHelpDeskDrafts', 'manageHelpDesk', 'filterScansByOfficer', 'manageBranding', 'manageLicense',
 ];
 const granted = (role: string) => ALL.filter((p) => hasPermission(role, p));
 

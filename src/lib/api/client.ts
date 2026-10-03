@@ -1,6 +1,7 @@
 import { apiOrigin, env } from '@/config/env';
 import { updateClockFromResponse, serverTimestampSeconds } from './clock';
-import { APP_AUTH_ERRORS, ApiError, PLATFORM_NOT_ALLOWED, UNIT_INACTIVE } from './errors';
+import { appBlock } from './appBlock';
+import { APP_AUTH_ERRORS, APP_CLIENT_OVER_LICENSE, ApiError, LICENSE_INACTIVE, PLATFORM_NOT_ALLOWED, UNIT_INACTIVE, UNIT_OVER_LICENSE } from './errors';
 import { randomNonce, serializeFormData, serializeJson, signRequest, type PreparedBody } from './signing';
 import type { Envelope } from './types';
 
@@ -22,12 +23,14 @@ export interface ApiRequestOptions {
  * Connects apiFetch to the session without a circular import. The session
  * module registers itself at startup.
  */
+export type RevokeReason = 'unit_inactive' | 'forbidden' | 'license_inactive' | 'unit_over_license';
+
 export interface AuthHandler {
   getAccessToken(): Promise<string | null>;
   /** Called after a 401 "Unauthorized". Resolves true when a new token is available. */
   handleUnauthorized(usedToken: string): Promise<boolean>;
   /** The server revoked the session for good (inactive unit, role blocked on this platform). */
-  handleRevoked(reason: 'unit_inactive' | 'forbidden'): void;
+  handleRevoked(reason: RevokeReason): void;
 }
 
 let authHandler: AuthHandler | null = null;
@@ -137,10 +140,15 @@ export async function apiRequest(path: string, options: ApiRequestOptions = {}):
       throw error;
     }
 
+    // This web App Client is above the license limit: nothing works, login included.
+    if (response.status === 403 && error.mentions(APP_CLIENT_OVER_LICENSE)) appBlock.set();
+
     // Not an ordinary 403: the session itself is no longer allowed, on any request.
     if (response.status === 403 && useAuth && authHandler) {
       if (error.mentions(UNIT_INACTIVE)) authHandler.handleRevoked('unit_inactive');
       else if (error.mentions(PLATFORM_NOT_ALLOWED)) authHandler.handleRevoked('forbidden');
+      else if (error.mentions(LICENSE_INACTIVE)) authHandler.handleRevoked('license_inactive');
+      else if (error.mentions(UNIT_OVER_LICENSE)) authHandler.handleRevoked('unit_over_license');
     }
 
     if (response.status === 401 && useAuth && token && authHandler && !authRetried) {

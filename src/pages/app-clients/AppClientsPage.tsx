@@ -31,6 +31,7 @@ import { appClientsApi } from '@/api/appClients';
 import { env } from '@/config/env';
 import { ActiveBadge } from '@/components/Badges';
 import { confirmDelete } from '@/components/confirm';
+import { LicenseQuota } from '@/components/LicenseQuota';
 import { PageHeader } from '@/components/PageHeader';
 import { PaginationBar } from '@/components/PaginationBar';
 import { SearchInput } from '@/components/SearchInput';
@@ -306,9 +307,12 @@ export default function AppClientsPage() {
         title="App Client"
         description="App ID dan App Key untuk aplikasi mobile, web, dan server."
         actions={
-          <Button leftSection={<IconPlus size={16} />} onClick={() => openForm(null)}>
-            Buat App Client
-          </Button>
+          <>
+            <LicenseQuota kind="app_clients" />
+            <Button leftSection={<IconPlus size={16} />} onClick={() => openForm(null)}>
+              Buat App Client
+            </Button>
+          </>
         }
       />
       <Card withBorder radius="md">

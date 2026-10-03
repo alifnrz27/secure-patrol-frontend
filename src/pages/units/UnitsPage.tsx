@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { unitsApi, type UnitBody } from '@/api/units';
 import { ActiveBadge } from '@/components/Badges';
 import { confirmDelete } from '@/components/confirm';
+import { LicenseQuota } from '@/components/LicenseQuota';
 import { PageHeader } from '@/components/PageHeader';
 import { PaginationBar } from '@/components/PaginationBar';
 import { SearchInput } from '@/components/SearchInput';
@@ -198,7 +199,12 @@ export default function UnitsPage() {
       <PageHeader
         title="Unit"
         description="Master data unit. Setiap unit punya titik patroli, shift, pengguna, dan pengaturannya sendiri."
-        actions={canManage && <Button leftSection={<IconPlus size={16} />} onClick={() => openForm(null)}>Tambah Unit</Button>}
+        actions={
+          <>
+            <LicenseQuota kind="units" />
+            {canManage && <Button leftSection={<IconPlus size={16} />} onClick={() => openForm(null)}>Tambah Unit</Button>}
+          </>
+        }
       />
       <Card withBorder radius="md">
         <Group mb="md" gap="sm">

@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Alert, Button, Center, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core';
-import { IconAlertTriangle, IconClock } from '@tabler/icons-react';
-import { useState } from 'react';
+import { IconAlertTriangle, IconClock, IconLock } from '@tabler/icons-react';
+import { useState, useSyncExternalStore } from 'react';
 import { useForm } from 'react-hook-form';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
@@ -11,6 +11,7 @@ import { useBranding, useDocumentTitle } from '@/hooks/useBranding';
 import { useSession } from '@/hooks/useSession';
 import { describeError, isApiError } from '@/lib/api/errors';
 import { session } from '@/lib/auth/session';
+import { licenseGate } from '@/lib/licenseGate';
 import { applyServerErrors } from '@/lib/formErrors';
 
 const schema = z.object({
@@ -32,6 +33,8 @@ export function LoginPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
+  const gate = useSyncExternalStore(licenseGate.subscribe, licenseGate.get);
+  const [superAdminLogin, setSuperAdminLogin] = useState(false);
   const redirect = safeRedirect(params.get('redirect'));
   const expired = params.get('expired') === '1';
 
@@ -41,6 +44,26 @@ export function LoginPage() {
   });
 
   if (status === 'authenticated') return <Navigate to={redirect} replace />;
+
+  // License locked: explain first; only the Super-Admin can log in (to install a license).
+  if (gate?.locked && !superAdminLogin) {
+    return (
+      <Center mih="100vh" p="md" bg="gray.0">
+        <Paper withBorder shadow="sm" p="xl" radius="lg" w="100%" maw={440}>
+          <Stack align="center" gap="sm">
+            <BrandLogo size={56} />
+            <Title order={2} ta="center">{appName}</Title>
+            <Alert color="red" icon={<IconLock size={18} />} title="License belum aktif" w="100%">
+              Sistem belum memiliki license aktif, sehingga pengguna belum bisa masuk. Hubungi administrator. Super-Admin
+              dapat masuk untuk memasang license.
+            </Alert>
+            <Button fullWidth onClick={() => setSuperAdminLogin(true)}>Masuk sebagai Super-Admin</Button>
+          </Stack>
+        </Paper>
+      </Center>
+    );
+  }
+
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
@@ -71,9 +94,24 @@ export function LoginPage() {
                 Konfigurasi aplikasi belum lengkap (VITE_APP_ID, VITE_APP_KEY).
               </Alert>
             )}
+            {gate?.locked && (
+              <Alert color="orange" icon={<IconLock size={18} />}>
+                License belum aktif: hanya Super-Admin yang dapat masuk untuk memasang license.
+              </Alert>
+            )}
             {apiConfigProblem() && (
               <Alert color="red" icon={<IconAlertTriangle size={18} />} title="Konfigurasi API">
                 {apiConfigProblem()}
+              </Alert>
+            )}
+            {(endReason === 'license_inactive' || params.get('reason') === 'license_inactive') && !formError && (
+              <Alert color="red" icon={<IconAlertTriangle size={18} />}>
+                Sistem belum memiliki license aktif. Hubungi administrator.
+              </Alert>
+            )}
+            {(endReason === 'unit_over_license' || params.get('reason') === 'unit_over_license') && !formError && (
+              <Alert color="red" icon={<IconAlertTriangle size={18} />}>
+                Unit Anda melebihi batas license, hubungi pusat.
               </Alert>
             )}
             {endReason === 'unit_inactive' && !formError && (

@@ -15,6 +15,12 @@ export type ApiErrorKind =
 
 /** 403 on any request once a unit is deactivated (login, refresh, or a token already in use). */
 export const UNIT_INACTIVE = 'your unit is inactive, contact the head office';
+/** 403 on every request while the license is missing, expired or invalid (except the Super-Admin's session/license). */
+export const LICENSE_INACTIVE = 'license is not active, contact your administrator';
+/** 403 for users of a unit above the license's unit limit. */
+export const UNIT_OVER_LICENSE = 'your unit exceeds the license limit, contact the head office';
+/** 403 on every request (login included) when this web App Client is above the license limit. */
+export const APP_CLIENT_OVER_LICENSE = 'this app client exceeds the license limit';
 /** 403 for a role that may not use this platform (e.g. Tim Keamanan on the web). */
 export const PLATFORM_NOT_ALLOWED = 'your role is not allowed to sign in on this platform';
 
@@ -113,6 +119,20 @@ const SERVER_MESSAGES_ID: Record<string, string> = {
     'Unit masih memiliki pengguna atau titik patroli. Pindahkan atau hapus datanya dulu, atau nonaktifkan unit ini.',
   'unit_id is required for this role': 'Unit wajib dipilih untuk role ini.',
   'unit not found': 'Unit tidak ditemukan.',
+  'license is not active, contact your administrator': 'Sistem belum memiliki license aktif. Hubungi administrator.',
+  'your unit exceeds the license limit, contact the head office': 'Unit Anda melebihi batas license, hubungi pusat.',
+  'this app client exceeds the license limit': 'Aplikasi ini melebihi batas license. Hubungi administrator.',
+  'no license is installed': 'Belum ada license terpasang.',
+  'no license is installed, the Super-Admin must install one': 'Belum ada license terpasang. Super-Admin perlu memasang license.',
+  'the license has expired, renew it before the grace period ends': 'License sudah berakhir. Perbarui sebelum masa tenggang habis.',
+  'the license and its grace period have expired': 'License dan masa tenggangnya sudah berakhir.',
+  'license code is malformed': 'Kode license tidak valid.',
+  'license code signature is invalid': 'Kode license tidak valid.',
+  'this license was issued for another installation': 'License ini untuk instalasi lain (Install ID berbeda).',
+  'this license has already expired': 'License ini sudah berakhir.',
+  'date_from and date_to are required for an export': 'Tanggal dari dan sampai wajib diisi.',
+  'date_from must not be after date_to': 'Tanggal dari tidak boleh setelah tanggal sampai.',
+  'group_id or shift_id is required': 'Pilih shift terlebih dahulu.',
   'logo size must not exceed 1 MB': 'Ukuran logo maksimal 1 MB.',
   'app_name must not be empty': 'Nama aplikasi wajib diisi.',
   'patrol points are managed by each unit': 'Titik patroli dikelola oleh masing-masing unit.',
@@ -132,6 +152,18 @@ export function translateServerMessage(message: string): string {
   const range = /^must be between (\S+) and (\S+)$/.exec(message);
   if (range) return `Harus antara ${range[1]} dan ${range[2]}.`;
   if (message === 'unknown setting') return 'Setting tidak dikenal.';
+  if (message.startsWith('license code content is invalid')) return 'Kode license tidak valid.';
+  const unitLimit = /^the license unit limit has been reached(?: \((\d+)\))?/.exec(message);
+  if (unitLimit) return `Batas unit license tercapai${unitLimit[1] ? ` (${unitLimit[1]})` : ''}. Nonaktifkan unit lain atau perbarui license.`;
+  const appLimit = /^the license app client limit has been reached(?: \((\d+)\))?/.exec(message);
+  if (appLimit) return `Batas App Client license tercapai${appLimit[1] ? ` (${appLimit[1]})` : ''}. Nonaktifkan App Client lain atau perbarui license.`;
+  if (message.startsWith('an export with photos can cover only 1 day')) return 'Ekspor dengan foto hanya untuk 1 hari: samakan tanggal dari dan sampai.';
+  const photoRange = /^an export with photos can cover at most (\d+) days/.exec(message);
+  if (photoRange) return `Ekspor dengan foto maksimal ${photoRange[1]} hari. Persempit rentang tanggal.`;
+  const exportRange = /^an export can cover at most (\d+) days/.exec(message);
+  if (exportRange) return `Ekspor maksimal ${exportRange[1]} hari. Persempit rentang tanggal.`;
+  const photoRows = /^an export with photos is limited to (\d+) rows/.exec(message);
+  if (photoRows) return `Ekspor dengan foto maksimal ${Number(photoRows[1]).toLocaleString('id-ID')} baris. Persempit filter.`;
   const exportLimit = /^export is limited to (\d+) rows/.exec(message);
   if (exportLimit) return `Ekspor maksimal ${Number(exportLimit[1]).toLocaleString('id-ID')} baris. Persempit filter, misalnya rentang tanggal.`;
   return message;

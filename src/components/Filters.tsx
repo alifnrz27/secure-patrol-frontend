@@ -9,17 +9,30 @@ import { usersApi } from '@/api/users';
 import { useUnitScope } from '@/hooks/useUnitScope';
 import { dayjs } from '@/lib/format';
 
+/**
+ * Unit whose options a select shows: the header picker by default, or an
+ * explicit unit (null = every unit) such as the one picked in the export dialog.
+ */
+type Scope = { scopeUnitId?: number | null };
+
+function useScopedUnit(scopeUnitId: number | null | undefined) {
+  const scope = useUnitScope();
+  const unitId = scopeUnitId === undefined ? scope.unitId : (scopeUnitId ?? undefined);
+  return { ...scope, unitId, showUnitColumn: scope.isHeadOffice && !unitId };
+}
+
 /** Shifts of the picked unit (head office: every unit when none is picked). */
-export function useShifts() {
-  const { unitId } = useUnitScope();
+export function useShifts(scopeUnitId?: number | null) {
+  const { unitId } = useScopedUnit(scopeUnitId);
   return useQuery({ queryKey: ['patrol-shifts', unitId ?? 'all'], queryFn: () => patrolShiftsApi.list(unitId), staleTime: 60_000 });
 }
 
-export function ShiftSelect({ value, onChange }: { value: string; onChange: (v: string | null) => void }) {
-  const shifts = useShifts();
-  const { showUnitColumn, unitName } = useUnitScope();
+export function ShiftSelect({ value, onChange, scopeUnitId, label }: { value: string; onChange: (v: string | null) => void; label?: string } & Scope) {
+  const shifts = useShifts(scopeUnitId);
+  const { showUnitColumn, unitName } = useScopedUnit(scopeUnitId);
   return (
     <Select
+      label={label}
       aria-label="Filter shift"
       placeholder="Semua shift"
       data={(shifts.data ?? []).map((s) => ({
@@ -35,8 +48,8 @@ export function ShiftSelect({ value, onChange }: { value: string; onChange: (v: 
   );
 }
 
-export function PatrolPointSelect({ value, onChange }: { value: string; onChange: (v: string | null) => void }) {
-  const { unitId, showUnitColumn, unitName } = useUnitScope();
+export function PatrolPointSelect({ value, onChange, scopeUnitId, label }: { value: string; onChange: (v: string | null) => void; label?: string } & Scope) {
+  const { unitId, showUnitColumn, unitName } = useScopedUnit(scopeUnitId);
   const points = useQuery({
     queryKey: ['patrol-points', 'all', unitId ?? 'all'],
     queryFn: () => patrolPointsApi.list({ limit: 100, unit_id: unitId }),
@@ -44,6 +57,7 @@ export function PatrolPointSelect({ value, onChange }: { value: string; onChange
   });
   return (
     <Select
+      label={label}
       aria-label="Filter titik"
       placeholder="Semua titik"
       data={(points.data?.items ?? []).map((p) => ({ value: String(p.id), label: showUnitColumn ? `${p.name} — ${unitName(p.unit_id)}` : p.name }))}
@@ -57,8 +71,14 @@ export function PatrolPointSelect({ value, onChange }: { value: string; onChange
 }
 
 /** Users of the picked unit; unit users only get their own unit from the server. */
-export function OfficerSelect({ value, onChange, label = 'petugas' }: { value: string; onChange: (v: string | null) => void; label?: string }) {
-  const { unitId, showUnitColumn } = useUnitScope();
+export function OfficerSelect({
+  value,
+  onChange,
+  label = 'petugas',
+  scopeUnitId,
+  fieldLabel,
+}: { value: string; onChange: (v: string | null) => void; label?: string; fieldLabel?: string } & Scope) {
+  const { unitId, showUnitColumn } = useScopedUnit(scopeUnitId);
   const users = useQuery({
     queryKey: ['users', 'all-officers', unitId ?? 'all'],
     queryFn: () => usersApi.list({ limit: 100, unit_id: unitId }),
@@ -66,6 +86,7 @@ export function OfficerSelect({ value, onChange, label = 'petugas' }: { value: s
   });
   return (
     <Select
+      label={fieldLabel}
       aria-label={`Filter ${label}`}
       placeholder={`Semua ${label}`}
       data={(users.data?.items ?? []).map((u) => ({ value: String(u.id), label: showUnitColumn ? `${u.name} — ${u.unit?.name ?? 'Pusat'}` : u.name }))}

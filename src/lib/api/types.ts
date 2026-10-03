@@ -95,6 +95,7 @@ export interface TokenResponse {
   refresh_expires_at: string;
   user: LoginUser;
   config: AppConfig;
+  license?: LicenseSummary | null;
 }
 
 export interface Role {
@@ -280,7 +281,7 @@ export interface AuditLog {
   created_at: string;
 }
 
-export type SettingGroup = 'patrol' | 'face' | 'security';
+export type SettingGroup = 'patrol' | 'face' | 'security' | 'export';
 export type SettingValue = number | boolean;
 
 export interface Setting {
@@ -311,4 +312,82 @@ export interface Branding {
   logo_mime_type: 'image/jpeg' | 'image/png' | null;
   logo_updated_at: string | null;
   updated_at: string;
+}
+
+export type LicenseStatus = 'missing' | 'active' | 'grace' | 'expired' | 'invalid';
+
+/** License summary sent with login, refresh and GET /auth/me (for the banner). */
+export interface LicenseSummary {
+  status: LicenseStatus;
+  expires_at: string | null;
+  grace_until: string | null;
+  /** Days until expiry (active, only when ≤ 30) or until the grace period ends (grace) */
+  days_left: number | null;
+}
+
+export interface License {
+  status: LicenseStatus;
+  /** Why the license is not active */
+  reason?: string;
+  /** true = only the Super-Admin can work */
+  locked: boolean;
+  install_id: string;
+  license: {
+    license_id: string;
+    customer: string;
+    issued_at: string;
+    expires_at: string;
+    grace_days: number;
+    grace_until: string;
+  } | null;
+  days_left: number | null;
+  limits: { units: { max: number; used: number }; app_clients: { max: number; used: number } };
+  over_limit: { units: boolean; app_clients: boolean };
+  checked_at: string;
+}
+
+/** GET /auth/me: the profile plus the license summary. */
+export interface Profile extends User {
+  license?: LicenseSummary | null;
+}
+
+/** GET /license/status: public (signed app request only), checked before login. */
+export interface LicensePublicStatus {
+  status: LicenseStatus;
+  /** true = only the Super-Admin may log in, to install a license */
+  locked: boolean;
+  message: string;
+  expires_at: string | null;
+  grace_until: string | null;
+  days_left: number | null;
+}
+
+export interface PointSummaryItem {
+  patrol_point_id: number;
+  name: string;
+  location: string;
+  nfc_code: string;
+  /** Groups (shift × date) whose list contains this point */
+  groups: number;
+  /** Groups in which this point was scanned at least once */
+  scanned_groups: number;
+  total_scans: number;
+  normal_scans: number;
+  abnormal_scans: number;
+  /** Distinct officers who scanned it */
+  officers: number;
+  first_scanned_at: string | null;
+  last_scanned_at: string | null;
+}
+
+/** GET /patrol-point-summary: total patrols per point for one shift (one group or a date range). */
+export interface PointSummary {
+  unit: { id: number; code: string; name: string };
+  shift: { id: number; name: string };
+  group_id: number | null;
+  date_from: string;
+  date_to: string;
+  groups: number;
+  totals: { points: number; scanned_points: number; unscanned_points: number; total_scans: number; abnormal_scans: number };
+  items: PointSummaryItem[];
 }

@@ -7,12 +7,20 @@ import { GroupStatusBadge } from '@/components/Badges';
 import { GroupItemsTable, ProgressCell } from '@/components/GroupItemsTable';
 import { PageHeader } from '@/components/PageHeader';
 import { PaginationBar } from '@/components/PaginationBar';
+import { PointSummaryView } from '@/components/PointSummaryView';
 import { ScanDetailDrawer } from '@/components/ScanDetailDrawer';
 import { ScansTable } from '@/components/ScansTable';
 import { CardsSkeleton, EmptyState, ErrorState, TableSkeleton } from '@/components/StateViews';
 import { formatDate, formatDateTime } from '@/lib/format';
 
 const PointsStatusMap = lazy(() => import('@/components/maps/PointsStatusMap').then((m) => ({ default: m.PointsStatusMap })));
+
+function GroupPointSummary({ groupId }: { groupId: number }) {
+  const query = useQuery({ queryKey: ['patrol-point-summary', { group_id: groupId }], queryFn: () => patrolApi.pointSummary({ group_id: groupId }) });
+  if (query.isPending) return <TableSkeleton cols={6} />;
+  if (query.isError) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
+  return <PointSummaryView summary={query.data} fileName={`rekap-titik-group-${groupId}.csv`} />;
+}
 
 function GroupScans({ groupId, onOpen }: { groupId: number; onOpen: (id: number) => void }) {
   const [page, setPage] = useState(1);
@@ -86,6 +94,7 @@ export default function GroupDetailPage() {
                 <Tabs.Tab value="checklist">Checklist ({query.data.items.length})</Tabs.Tab>
                 <Tabs.Tab value="map">Peta</Tabs.Tab>
                 <Tabs.Tab value="scans">Scan ({query.data.progress.total_scans})</Tabs.Tab>
+                <Tabs.Tab value="summary">Rekap per titik</Tabs.Tab>
               </Tabs.List>
               <Tabs.Panel value="checklist">
                 <GroupItemsTable items={query.data.items} />
@@ -97,6 +106,9 @@ export default function GroupDetailPage() {
               </Tabs.Panel>
               <Tabs.Panel value="scans">
                 <GroupScans groupId={id} onOpen={setScanId} />
+              </Tabs.Panel>
+              <Tabs.Panel value="summary">
+                <GroupPointSummary groupId={id} />
               </Tabs.Panel>
             </Tabs>
           </Card>
