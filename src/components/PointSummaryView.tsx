@@ -137,7 +137,13 @@ function BatteryChart({ rows, showAxis = true }: { rows: Row[]; showAxis?: boole
  * plus a table that highlights points not scanned or missed in some shifts.
  */
 export function PointSummaryView({ summary, fileName }: { summary: PointSummary; fileName: string }) {
-  if (summary.items.length === 0) return <EmptyState title="Belum ada titik patroli di shift ini" />;
+  if (summary.items.length === 0) {
+    return summary.area_id ? (
+      <EmptyState title="Belum ada titik patroli di area ini" description="Pilih area lain, atau tambahkan titik ke area ini di menu Titik Patroli." />
+    ) : (
+      <EmptyState title="Belum ada titik patroli di shift ini" />
+    );
+  }
 
   const rows: Row[] = summary.items.map((item) => ({
     ...item,

@@ -1,6 +1,7 @@
 import { createBrowserRouter, Outlet } from 'react-router-dom';
 import { AppLayout } from '@/app/AppLayout';
 import { RequireAuth, RequirePermission } from '@/app/guards';
+import { RouteError } from '@/app/RouteError';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/ErrorPages';
 import type { Permission } from '@/lib/permissions';
@@ -26,9 +27,10 @@ function page(load: () => PageModule, permission?: Permission) {
 }
 
 export const router = createBrowserRouter([
-  { path: '/login', element: <LoginPage /> },
+  { path: '/login', element: <LoginPage />, errorElement: <RouteError /> },
   // Full-width pages without the sidebar (e.g. for a wall monitor).
   {
+    errorElement: <RouteError />,
     element: (
       <RequireAuth>
         <Outlet />
@@ -37,6 +39,7 @@ export const router = createBrowserRouter([
     children: [{ path: 'recap', ...page(() => import('@/pages/recap/RecapPage'), 'viewPatrol') }],
   },
   {
+    errorElement: <RouteError />,
     element: (
       <RequireAuth>
         <AppLayout>
