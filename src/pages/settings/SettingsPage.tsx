@@ -1,11 +1,11 @@
-import { Affix, Alert, Badge, Button, Card, Group, NumberInput, Paper, Skeleton, Stack, Switch, Text, Title, Tooltip, Transition } from '@mantine/core';
-import { IconArrowBackUp, IconInfoCircle, IconRestore } from '@tabler/icons-react';
+import { Affix, Badge, Button, Card, Group, NumberInput, Paper, Skeleton, Stack, Switch, Text, Title, Tooltip, Transition } from '@mantine/core';
+import { IconArrowBackUp, IconRestore } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { settingsApi } from '@/api/settings';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState } from '@/components/StateViews';
-import { usePermission, useSession } from '@/hooks/useSession';
+import { usePermission } from '@/hooks/useSession';
 import { useUnitScope } from '@/hooks/useUnitScope';
 import { isApiError, translateServerMessage } from '@/lib/api/errors';
 import type { Setting, SettingValue } from '@/lib/api/types';
@@ -138,8 +138,7 @@ function SettingRow({ setting, draft, readOnly, error, onChange }: RowProps) {
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const canEditSettings = usePermission('editSettings');
-  const { user } = useSession();
-  const { isHeadOffice, unitId, unitName } = useUnitScope();
+  const { isHeadOffice, unitId } = useUnitScope();
   // Head office: the global values, or one unit's values (read only) when a unit is picked.
   // Unit users: the values of their own unit.
   const query = useQuery({ queryKey: ['settings', unitId ?? 'own'], queryFn: () => settingsApi.list(unitId) });
@@ -147,7 +146,6 @@ export default function SettingsPage() {
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
 
   const settings = query.data ?? [];
-  const level = settings[0]?.level ?? (isHeadOffice && !unitId ? 'global' : 'unit');
   const readOnly = !canEditSettings || (isHeadOffice && Boolean(unitId));
 
   // Switching units discards unsaved edits of the previous list.
@@ -195,27 +193,12 @@ export default function SettingsPage() {
     });
   };
 
-  let scopeText: string;
-  // if (level === 'global') {
-  //   scopeText = 'Nilai global: berlaku untuk semua unit yang tidak mengatur nilai sendiri.';
-  //   if (readOnly) scopeText += ' Anda hanya dapat melihat pengaturan.';
-  // } else if (isHeadOffice) {
-  //   scopeText = `Nilai ${unitName(unitId)} (hanya dibaca; setiap unit mengatur nilainya sendiri). Setting yang tidak diatur unit mengikuti nilai pusat.`;
-  // } else {
-  //   scopeText = `Nilai ${user?.unit?.name ?? 'unit Anda'}. Setting yang tidak diubah mengikuti nilai pusat; tombol "Ikuti nilai pusat" mengembalikannya.`;
-  // }
-
   return (
     <>
       <PageHeader
         title="Pengaturan"
         description="Pengaturan sistem yang dipakai server dan aplikasi mobile. Perubahan langsung berlaku tanpa restart dan tercatat di Log Aktivitas."
       />
-      {!query.isPending && !query.isError && (
-        <Alert variant="light" color={readOnly ? 'gray' : 'blue'} icon={<IconInfoCircle size={18} />} mb="md">
-          {scopeText}
-        </Alert>
-      )}
       {query.isPending ? (
         <Stack>{GROUPS.map((g) => <Skeleton key={g.key} h={220} radius="md" />)}</Stack>
       ) : query.isError ? (
