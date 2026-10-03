@@ -1,6 +1,6 @@
 import { Badge, Button, Card, Group, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
 import { IconDownload } from '@tabler/icons-react';
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { PointSummary, PointSummaryItem } from '@/lib/api/types';
 import { downloadCsv } from '@/lib/csv';
 import { formatDate, formatDateTime } from '@/lib/format';
@@ -10,6 +10,49 @@ import { EmptyState } from './StateViews';
 interface Row extends PointSummaryItem {
   bar: number;
   label: string;
+}
+
+const BATTERY_FILL = '#1c7ed6';
+const BATTERY_OUTLINE = '#868e96';
+const CAP_WIDTH = 4;
+const PADDING = 2;
+
+interface BatteryBarProps {
+  y?: number;
+  height?: number;
+  payload?: Row;
+  /** Full track of the row (the whole 0–10 scale), from the Bar `background` prop. */
+  background?: { x?: number | null; y?: number | null; width?: number | null; height?: number | null };
+}
+
+/**
+ * One row drawn as a battery: an outlined body over the full 0–10 scale, a
+ * small cap at the end, and a fill for the scans (10 or more = full). The real
+ * number (or "Belum di-scan") is written after the cap.
+ */
+function BatteryBar({ y = 0, height = 0, payload, background }: BatteryBarProps) {
+  if (!payload || !background?.width) return null;
+  const left = background.x ?? 0;
+  const bodyWidth = Math.max(0, background.width - CAP_WIDTH - 2);
+  const fillWidth = Math.max(0, (bodyWidth - PADDING * 2) * (payload.bar / BAR_SCALE_MAX));
+  const empty = payload.total_scans === 0;
+  return (
+    <g>
+      <rect x={left} y={y} width={bodyWidth} height={height} rx={4} fill="var(--mantine-color-body)" stroke={BATTERY_OUTLINE} strokeWidth={1.5} />
+      <rect x={left + bodyWidth + 1} y={y + height * 0.25} width={CAP_WIDTH} height={height * 0.5} rx={1.5} fill={BATTERY_OUTLINE} />
+      {fillWidth > 0 && <rect x={left + PADDING} y={y + PADDING} width={fillWidth} height={Math.max(0, height - PADDING * 2)} rx={2.5} fill={BATTERY_FILL} />}
+      <text
+        x={left + bodyWidth + CAP_WIDTH + 10}
+        y={y + height / 2}
+        dominantBaseline="central"
+        fontSize={12}
+        fontWeight={empty ? 400 : 600}
+        fill={empty ? 'var(--mantine-color-red-7)' : 'var(--mantine-color-text)'}
+      >
+        {payload.label}
+      </text>
+    </g>
+  );
 }
 
 function ChartTooltip({ active, payload }: { active?: boolean; payload?: { payload: Row }[] }) {
@@ -82,26 +125,21 @@ export function PointSummaryView({ summary, fileName }: { summary: PointSummary;
       <Card withBorder radius="md">
         <Title order={5}>Total scan per titik</Title>
         <Text size="xs" c="dimmed" mb="sm">
-          Skala 0–{BAR_SCALE_MAX}: titik dengan {BAR_SCALE_MAX} scan atau lebih selalu bar penuh; angka di ujung bar adalah jumlah sebenarnya.
+          Setiap titik ditampilkan seperti baterai berskala 0–{BAR_SCALE_MAX}: {BAR_SCALE_MAX} scan atau lebih = penuh; angka di kanan adalah jumlah sebenarnya.
         </Text>
         <div
-          style={{ height: rows.length * 34 + 40 }}
+          style={{ height: rows.length * 40 + 40 }}
           role="img"
           aria-label={`Grafik total scan per titik. ${rows.map((r) => `${r.name}: ${r.total_scans}`).join(', ')}`}
         >
           <ResponsiveContainer>
             <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 96, left: 8, bottom: 4 }} barCategoryGap={8}>
               <CartesianGrid horizontal={false} stroke="var(--mantine-color-gray-2)" />
-              <XAxis type="number" domain={[0, BAR_SCALE_MAX]} ticks={[0, 2, 4, 6, 8, 10]} allowDataOverflow tickLine={false} axisLine={false} fontSize={12} />
+              <XAxis type="number" domain={[0, BAR_SCALE_MAX]} ticks={[0, 2, 4, 6, 8, 10]} tickLine={false} axisLine={false} fontSize={12} />
               <YAxis type="category" dataKey="name" width={170} tickLine={false} axisLine={false} fontSize={12} interval={0} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--mantine-color-gray-1)' }} />
-              {/* minPointSize gives 0-scan points an invisible bar so their "Belum di-scan" label still renders. */}
-              <Bar dataKey="bar" fill="#1c7ed6" radius={[0, 4, 4, 0]} maxBarSize={18} minPointSize={2} isAnimationActive={false}>
-                {rows.map((row) => (
-                  <Cell key={row.patrol_point_id} fill={row.total_scans === 0 ? 'transparent' : '#1c7ed6'} />
-                ))}
-                <LabelList dataKey="label" position="right" fontSize={12} fill="var(--mantine-color-text)" />
-              </Bar>
+              {/* `background` gives each row its full 0–10 track, drawn by BatteryBar as the battery outline. */}
+              <Bar dataKey="bar" maxBarSize={22} minPointSize={1} background={{ fill: 'transparent' }} shape={BatteryBar} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -1,13 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ActionIcon, Alert, Badge, Button, Card, Code, CopyButton, Grid, Group, Progress, Skeleton, Stack, Table, Text, Textarea, Title, Tooltip } from '@mantine/core';
+import { ActionIcon, Alert, Badge, Button, Card, Code, Grid, Group, Progress, Skeleton, Stack, Table, Text, Textarea, Title, Tooltip } from '@mantine/core';
 import { IconAlertTriangle, IconCheck, IconCopy, IconLicense } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { licenseApi } from '@/api/license';
+import { CopyAction } from '@/components/CopyAction';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState } from '@/components/StateViews';
-import { translateServerMessage } from '@/lib/api/errors';
+import { isApiError, translateServerMessage } from '@/lib/api/errors';
 import type { License } from '@/lib/api/types';
 import { session } from '@/lib/auth/session';
 import { licenseGate } from '@/lib/licenseGate';
@@ -133,7 +134,7 @@ function LicenseDetail({ data }: { data: License }) {
         <Text size="sm" fw={500} mb={4}>Install ID</Text>
         <Group gap="xs" wrap="nowrap">
           <Code fz="sm" style={{ flex: 1 }}>{data.install_id}</Code>
-          <CopyButton value={data.install_id}>
+          <CopyAction value={data.install_id}>
             {({ copied, copy }) => (
               <Tooltip label={copied ? 'Tersalin' : 'Salin'}>
                 <ActionIcon variant="light" color={copied ? 'teal' : 'blue'} onClick={copy} aria-label="Salin Install ID">
@@ -141,7 +142,7 @@ function LicenseDetail({ data }: { data: License }) {
                 </ActionIcon>
               </Tooltip>
             )}
-          </CopyButton>
+          </CopyAction>
         </Group>
         <Text size="xs" c="dimmed" mt={4}>Kirim Install ID ini ke vendor untuk mendapatkan license.</Text>
       </div>
@@ -168,7 +169,18 @@ function LicenseDetail({ data }: { data: License }) {
 export function LicensePanel() {
   const query = useLicense();
   if (query.isPending) return <Skeleton h={360} radius="md" />;
-  if (query.isError) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
+  if (query.isError) {
+    // An older backend without the license module answers 404 "Cannot GET /api/v1/license".
+    if (isApiError(query.error) && query.error.kind === 'not_found') {
+      return (
+        <Alert color="orange" icon={<IconAlertTriangle size={18} />} title="Fitur license belum tersedia di server">
+          Backend yang terhubung belum mendukung license (versi lama). Perbarui dan build ulang backend ke versi terbaru,
+          lalu muat ulang halaman ini.
+        </Alert>
+      );
+    }
+    return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
+  }
   const data = query.data;
   return (
     <Grid gutter="lg">

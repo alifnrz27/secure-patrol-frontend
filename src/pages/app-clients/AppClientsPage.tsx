@@ -7,7 +7,7 @@ import {
   Card,
   Checkbox,
   Code,
-  CopyButton,
+  
   Group,
   Menu,
   Modal,
@@ -32,6 +32,7 @@ import { env } from '@/config/env';
 import { ActiveBadge } from '@/components/Badges';
 import { confirmDelete } from '@/components/confirm';
 import { LicenseQuota } from '@/components/LicenseQuota';
+import { CopyAction } from '@/components/CopyAction';
 import { PageHeader } from '@/components/PageHeader';
 import { PaginationBar } from '@/components/PaginationBar';
 import { SearchInput } from '@/components/SearchInput';
@@ -55,7 +56,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
       <Text size="sm" fw={500} mb={4}>{label}</Text>
       <Group gap="xs" wrap="nowrap">
         <Code block style={{ flex: 1, wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>{value}</Code>
-        <CopyButton value={value}>
+        <CopyAction value={value}>
           {({ copied, copy }) => (
             <Tooltip label={copied ? 'Tersalin' : 'Salin'}>
               <ActionIcon variant="light" color={copied ? 'teal' : 'blue'} onClick={copy} aria-label={`Salin ${label}`}>
@@ -63,7 +64,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
               </ActionIcon>
             </Tooltip>
           )}
-        </CopyButton>
+        </CopyAction>
       </Group>
     </div>
   );
@@ -356,13 +357,13 @@ export default function AppClientsPage() {
                       <Table.Td>
                         <Group gap={4} wrap="nowrap">
                           <Text size="xs" ff="monospace">{client.app_id}</Text>
-                          <CopyButton value={client.app_id}>
+                          <CopyAction value={client.app_id}>
                             {({ copied, copy }) => (
                               <ActionIcon size="sm" variant="subtle" color={copied ? 'teal' : 'gray'} onClick={copy} aria-label={`Salin App ID ${client.name}`}>
                                 {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
                               </ActionIcon>
                             )}
-                          </CopyButton>
+                          </CopyAction>
                         </Group>
                       </Table.Td>
                       <Table.Td><Text size="xs" ff="monospace">{client.key_hint}</Text></Table.Td>

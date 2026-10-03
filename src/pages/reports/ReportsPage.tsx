@@ -1,14 +1,13 @@
-import { Alert, Anchor, Badge, Button, Card, Group, Progress, SegmentedControl, SimpleGrid, Skeleton, Stack, Table, Text, Title } from '@mantine/core';
-import { IconDownload } from '@tabler/icons-react';
+import { Alert, Anchor, Badge, Button, Card, Group, Progress, SimpleGrid, Skeleton, Stack, Table, Text, Title } from '@mantine/core';
+import { IconDeviceDesktopAnalytics, IconDownload } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { patrolApi } from '@/api/patrol';
 import { GroupStatusBadge } from '@/components/Badges';
 import { DateRangeFilter, ShiftSelect } from '@/components/Filters';
 import { PageHeader } from '@/components/PageHeader';
-import { PointSummaryView } from '@/components/PointSummaryView';
 import { CardsSkeleton, EmptyState, ErrorState, TableSkeleton } from '@/components/StateViews';
 import { useUnitScope } from '@/hooks/useUnitScope';
 import { toNumber, useUrlFilters } from '@/hooks/useUrlFilters';
@@ -71,25 +70,6 @@ function byUnit(groups: PatrolGroup[]): UnitRow[] {
   return [...rows.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** Total patrols per point: one shift (its unit) over the report's date range. */
-function PointRecap({ shiftId, dateFrom, dateTo }: { shiftId: number | undefined; dateFrom: string; dateTo: string }) {
-  const query = useQuery({
-    queryKey: ['patrol-point-summary', { shift_id: shiftId, date_from: dateFrom, date_to: dateTo }],
-    queryFn: () => patrolApi.pointSummary({ shift_id: shiftId!, date_from: dateFrom, date_to: dateTo }),
-    enabled: Boolean(shiftId),
-  });
-  if (!shiftId) {
-    return (
-      <Card withBorder radius="md">
-        <EmptyState title="Pilih shift" description="Rekap per titik dihitung untuk satu shift (dan unitnya) pada rentang tanggal yang dipilih." />
-      </Card>
-    );
-  }
-  if (query.isPending) return <TableSkeleton cols={6} />;
-  if (query.isError) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
-  return <PointSummaryView summary={query.data} fileName={`rekap-titik-${query.data.shift.name}-${dateFrom}_${dateTo}.csv`.replace(/\s+/g, '-')} />;
-}
-
 function reportCsv(groups: PatrolGroup[]): string {
   return toCsv(
     ['Unit', 'Tanggal shift', 'Shift', 'Mulai', 'Selesai', 'Status', 'Titik di-scan', 'Total titik', 'Penyelesaian (%)', 'Total scan', 'Scan tidak normal'],
@@ -133,7 +113,8 @@ export default function ReportsPage() {
   const days = dayjs(filters.date_to).diff(dayjs(filters.date_from), 'day') + 1;
   const rangeValid = Boolean(filters.date_from && filters.date_to) && days >= 1 && days <= MAX_DAYS;
   const shiftId = toNumber(filters.shift_id);
-  const view = filters.view === 'points' ? 'points' : 'completion';
+  // The per-point recap moved to its own page (/recap); keep old links working.
+  const legacyPointsView = filters.view === 'points';
 
   const query = useQuery({
     queryKey: ['patrol-groups', 'report', unitId ?? 'all', filters.date_from, filters.date_to, shiftId],
@@ -142,7 +123,7 @@ export default function ReportsPage() {
         (page, s) => patrolApi.groups({ unit_id: unitId, date_from: filters.date_from, date_to: filters.date_to, shift_id: shiftId, page, limit: MAX_PAGE_SIZE }, s),
         { signal, onProgress: (loaded) => setProgress(loaded) },
       ),
-    enabled: rangeValid && view === 'completion',
+    enabled: rangeValid && !legacyPointsView,
   });
 
   // "Semua unit": grouped by unit, then date and shift.
@@ -163,17 +144,24 @@ export default function ReportsPage() {
     { scanned: 0, total: 0, scans: 0, abnormal: 0, missed: 0 },
   );
 
+  if (legacyPointsView) {
+    const params = new URLSearchParams();
+    if (filters.shift_id) params.set('shift_id', filters.shift_id);
+    if (filters.shift_id && filters.date_from) params.set('date_from', filters.date_from);
+    if (filters.shift_id && filters.date_to) params.set('date_to', filters.date_to);
+    return <Navigate to={`/recap${params.size ? `?${params}` : ''}`} replace />;
+  }
+
   return (
     <>
       <PageHeader
         title="Laporan"
-        description={
-          view === 'points'
-            ? `Total patroli per titik untuk satu shift pada rentang tanggal (maksimal ${MAX_DAYS} hari).`
-            : `Tingkat penyelesaian patroli per hari per shift (maksimal ${MAX_DAYS} hari).`
-        }
+        description={`Tingkat penyelesaian patroli per hari per shift (maksimal ${MAX_DAYS} hari).`}
         actions={
-          view !== 'points' && (
+          <>
+            <Button component={Link} to="/recap" variant="light" leftSection={<IconDeviceDesktopAnalytics size={16} />}>
+              Rekap per titik
+            </Button>
             <Button
               variant="light"
               leftSection={<IconDownload size={16} />}
@@ -182,18 +170,8 @@ export default function ReportsPage() {
             >
               Ekspor CSV
             </Button>
-          )
+          </>
         }
-      />
-      <SegmentedControl
-        mb="md"
-        aria-label="Jenis laporan"
-        value={view}
-        onChange={(v) => setFilters({ view: v === 'completion' ? null : v })}
-        data={[
-          { value: 'completion', label: 'Penyelesaian' },
-          { value: 'points', label: 'Rekap per titik' },
-        ]}
       />
       <Group mb="md" gap="sm">
         <DateRangeFilter
@@ -206,13 +184,7 @@ export default function ReportsPage() {
         <ShiftSelect value={filters.shift_id} onChange={(shift_id) => setFilters({ shift_id })} />
       </Group>
 
-      {view === 'points' ? (
-        !rangeValid ? (
-          <Alert color="orange">Pilih rentang tanggal maksimal {MAX_DAYS} hari.</Alert>
-        ) : (
-          <PointRecap shiftId={shiftId} dateFrom={filters.date_from} dateTo={filters.date_to} />
-        )
-      ) : !rangeValid ? (
+      {!rangeValid ? (
         <Alert color="orange">Pilih rentang tanggal maksimal {MAX_DAYS} hari.</Alert>
       ) : query.isPending ? (
         <Stack>

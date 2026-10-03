@@ -154,8 +154,10 @@ src/
   kuning (≤ 30 hari) / merah (masa tenggang) dari `license` di login/refresh/`/auth/me`. 403 license tidak aktif /
   unit melebihi license mengakhiri sesi dengan pesan; App Client melebihi license menampilkan layar khusus.
   Menu Pengaturan → License (Super-Admin): status, Install ID, pemakaian, pasang kode. Kuota tampil di Unit dan App Client.
-- **Rekap per titik** (`/patrol-point-summary`): tab di detail group dan tampilan "Rekap per titik" di Laporan (pilih
-  shift). Grafik batang horizontal skala 0–10: ≥ 10 scan selalu penuh, angka sebenarnya di ujung bar; titik belum
+- **Rekap per titik** (`/patrol-point-summary`): tab di detail group dan halaman tersendiri **`/recap`** (menu "Rekap
+  per Titik", tanpa sidebar, cocok untuk monitor): default shift yang sedang aktif (`/patrol-groups/current`), mode
+  "Pilih shift" untuk shift dan rentang tanggal lain, diperbarui otomatis tiap 30 detik, tombol layar penuh. Link lama
+  `/reports?view=points` diarahkan ke halaman ini. Grafik batang horizontal skala 0–10: ≥ 10 scan selalu penuh, angka sebenarnya di ujung bar; titik belum
   di-scan / terlewat disorot; ekspor CSV.
 - **Ekspor Excel**: dialog berisi Unit (pusat), Shift, Titik, Petugas, tanggal (wajib, maksimal `export_max_range_days`
   hari) dan "Sertakan foto" (maksimal `export_photo_max_range_days` hari). untuk user pusat (awal dari pemilih unit); CSV ikut `unit_id` pemilih dan

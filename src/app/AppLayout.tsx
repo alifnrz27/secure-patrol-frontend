@@ -7,6 +7,7 @@ import {
   IconBuilding,
   IconCalendarTime,
   IconChartBar,
+  IconDeviceDesktopAnalytics,
   IconChevronDown,
   IconFileText,
   IconHelp,
@@ -52,6 +53,7 @@ const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
       { to: '/checkpoints', label: 'Titik per Shift/Periode', icon: <IconListCheck size={18} /> },
       { to: '/scans', label: 'Riwayat Scan', icon: <IconHistory size={18} /> },
       { to: '/reports', label: 'Laporan', icon: <IconChartBar size={18} /> },
+      { to: '/recap', label: 'Rekap per Titik', icon: <IconDeviceDesktopAnalytics size={18} /> },
     ],
   },
   {

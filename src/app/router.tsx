@@ -27,6 +27,15 @@ function page(load: () => PageModule, permission?: Permission) {
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  // Full-width pages without the sidebar (e.g. for a wall monitor).
+  {
+    element: (
+      <RequireAuth>
+        <Outlet />
+      </RequireAuth>
+    ),
+    children: [{ path: 'recap', ...page(() => import('@/pages/recap/RecapPage'), 'viewPatrol') }],
+  },
   {
     element: (
       <RequireAuth>
