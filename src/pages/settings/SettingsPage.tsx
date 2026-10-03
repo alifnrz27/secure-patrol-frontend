@@ -196,14 +196,14 @@ export default function SettingsPage() {
   };
 
   let scopeText: string;
-  if (level === 'global') {
-    scopeText = 'Nilai global: berlaku untuk semua unit yang tidak mengatur nilai sendiri.';
-    if (readOnly) scopeText += ' Anda hanya dapat melihat pengaturan.';
-  } else if (isHeadOffice) {
-    scopeText = `Nilai ${unitName(unitId)} (hanya dibaca; setiap unit mengatur nilainya sendiri). Setting yang tidak diatur unit mengikuti nilai pusat.`;
-  } else {
-    scopeText = `Nilai ${user?.unit?.name ?? 'unit Anda'}. Setting yang tidak diubah mengikuti nilai pusat; tombol "Ikuti nilai pusat" mengembalikannya.`;
-  }
+  // if (level === 'global') {
+  //   scopeText = 'Nilai global: berlaku untuk semua unit yang tidak mengatur nilai sendiri.';
+  //   if (readOnly) scopeText += ' Anda hanya dapat melihat pengaturan.';
+  // } else if (isHeadOffice) {
+  //   scopeText = `Nilai ${unitName(unitId)} (hanya dibaca; setiap unit mengatur nilainya sendiri). Setting yang tidak diatur unit mengikuti nilai pusat.`;
+  // } else {
+  //   scopeText = `Nilai ${user?.unit?.name ?? 'unit Anda'}. Setting yang tidak diubah mengikuti nilai pusat; tombol "Ikuti nilai pusat" mengembalikannya.`;
+  // }
 
   return (
     <>
